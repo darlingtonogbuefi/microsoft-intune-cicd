@@ -2,7 +2,7 @@ trigger: none
 
 resources:
   pipelines:
-    - pipeline: testPipeline
+    - pipeline: darlingtonogbuefi.microsoft-intune-cicd
       source: azure-pipelines-tests
       trigger:
         branches:
