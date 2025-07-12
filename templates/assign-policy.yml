@@ -1,38 +1,31 @@
-# templates/assign-policy.yml
-parameters: {}
+# /templates/assign-policy.yml
+parameters:
+  tenantId: ''
+  clientId: ''
+  clientSecret: ''
+  scriptAssignments: ''
 
 jobs:
-- job: AssignPolicy
+- job: AssignIntuneScripts
+  displayName: Assign Scripts to Intune Group
   pool:
     name: Default
   steps:
     - checkout: self
 
-    - task: DownloadPipelineArtifact@2
-      displayName: 'Download ScriptAssignments artifact'
-      inputs:
-        artifact: ScriptAssignments
-        path: $(Pipeline.Workspace)/ScriptAssignments
-
     - task: PowerShell@2
-      displayName: 'Assign each script to group'
+      displayName: 'Assign each script to device group'
       inputs:
         targetType: 'inline'
         pwsh: true
         script: |
-          $ErrorActionPreference = 'Stop'
+          $ErrorActionPreference = "Stop"
 
-          $filePath = "$(Pipeline.Workspace)/ScriptAssignments/script-assignments.json"
-          if (-not (Test-Path $filePath)) {
-            Write-Error "Assignment file not found: $filePath"
-            exit 1
-          }
-
-          $assignments = Get-Content -Raw -Path $filePath | ConvertFrom-Json
-
-          $tenantId = "$(TenantId)"
-          $clientId = "$(ClientId)"
-          $clientSecret = "$(clientsecret4053)"
+          $tenantId = "${{ parameters.tenantId }}"
+          $clientId = "${{ parameters.clientId }}"
+          $clientSecret = "${{ parameters.clientSecret }}"
+          $assignmentsJson = '${{ parameters.scriptAssignments }}'  # ← escaped string
+          $assignments = $assignmentsJson | ConvertFrom-Json
 
           if (-not (Get-Module -ListAvailable -Name Microsoft.Graph)) {
               Install-Module Microsoft.Graph -Force -Scope CurrentUser -AllowClobber
@@ -41,21 +34,24 @@ jobs:
 
           Connect-MgGraph -ClientId $clientId -TenantId $tenantId -ClientSecret $clientSecret -Scopes "DeviceManagementConfiguration.ReadWrite.All"
 
-          foreach ($item in $assignments) {
-            Write-Host "Assigning Script ID: $($item.scriptId) to Group ID: $($item.targetGroupId)"
+          foreach ($assignment in $assignments) {
+              $scriptId = $assignment.scriptId
+              $groupId = $assignment.targetGroupId
 
-            $body = @{
-              deviceManagementScriptAssignments = @(
-                @{
-                  target = @{
-                    groupId = $item.targetGroupId
-                  }
-                }
-              )
-            }
+              Write-Host "Assigning Script $scriptId to Group $groupId..."
 
-            Invoke-MgGraphRequest -Method POST `
-              -Uri "https://graph.microsoft.com/beta/deviceManagement/deviceManagementScripts/$($item.scriptId)/assign" `
-              -Body ($body | ConvertTo-Json -Depth 5) `
-              -ContentType "application/json"
+              $payload = @{
+                  deviceManagementScriptAssignments = @(
+                      @{
+                          target = @{
+                              groupId = $groupId
+                          }
+                      }
+                  )
+              }
+
+              Invoke-MgGraphRequest -Method POST `
+                -Uri "https://graph.microsoft.com/beta/deviceManagement/deviceManagementScripts/$scriptId/assign" `
+                -Body ($payload | ConvertTo-Json -Depth 5) `
+                -ContentType "application/json"
           }

@@ -1,6 +1,4 @@
 # /templates/deploy-intune.yml
-
-
 parameters: {}
 
 jobs:
@@ -11,11 +9,14 @@ jobs:
     - checkout: self
 
     - task: PowerShell@2
+      name: DeployScripts
       displayName: 'Deploy Scripts to Intune (if all tests passed)'
       inputs:
         targetType: 'inline'
         pwsh: true
         script: |
+          $ErrorActionPreference = "Stop"
+
           $scriptFolder = "$(System.DefaultWorkingDirectory)/$(SCRIPT_FOLDER)"
           $scriptFiles = Get-ChildItem -Path $scriptFolder -Filter '*.ps1' -File | Where-Object { $_.Name -notlike '*Tests.ps1' }
 
@@ -27,43 +28,22 @@ jobs:
           $tenantId = "$(TenantId)"
           $clientId = "$(ClientId)"
           $clientSecret = "$(clientsecret4053)"
+          $targetGroupId = "$(TargetGroupId)"
 
-          
-          # Ensure Az.Accounts module is installed
-          if (-not (Get-Module -ListAvailable -Name Az.Accounts)) {
-              Install-Module Az.Accounts -Force -Scope CurrentUser -AllowClobber
-          }
-
-          # Import Az.Accounts module if not already imported
-          if (-not (Get-Module -Name Az.Accounts)) {
-              Import-Module Az.Accounts
-          }
-
-          # Ensure Microsoft.Graph module is installed
           if (-not (Get-Module -ListAvailable -Name Microsoft.Graph)) {
               Install-Module Microsoft.Graph -Force -Scope CurrentUser -AllowClobber
           }
+          Import-Module Microsoft.Graph
 
-          # Import Microsoft.Graph module if not already imported
-          if (-not (Get-Module -Name Microsoft.Graph)) {
-              Import-Module Microsoft.Graph
-          }
+          Connect-MgGraph -ClientId $clientId -TenantId $tenantId -ClientSecret $clientSecret -Scopes "DeviceManagementConfiguration.ReadWrite.All"
 
-          $secureSecret = ConvertTo-SecureString $clientSecret -AsPlainText -Force
-          $cred = New-Object System.Management.Automation.PSCredential ($clientId, $secureSecret)
-
-
-          Connect-AzAccount -ServicePrincipal -TenantId $tenantId -Credential $cred
-          $token = (Get-AzAccessToken -TenantId $tenantId -ResourceUrl "https://graph.microsoft.com").Token
-          Connect-MgGraph -AccessToken $token
-
+          $assignments = @()
 
           foreach ($script in $scriptFiles) {
             $scriptContent = Get-Content -Raw -Path $script.FullName
             $encodedScript = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($scriptContent))
 
-
-            $deviceManagementScript = @{
+            $body = @{
               displayName           = [System.IO.Path]::GetFileNameWithoutExtension($script.FullName)
               description           = "Deployed via Azure DevOps pipeline"
               scriptContent         = $encodedScript
@@ -72,13 +52,28 @@ jobs:
               runAs32Bit            = $true
             }
 
-
-            Invoke-MgGraphRequest -Method POST `
+            $response = Invoke-MgGraphRequest -Method POST `
               -Uri "https://graph.microsoft.com/beta/deviceManagement/deviceManagementScripts" `
-              -Body ($deviceManagementScript | ConvertTo-Json -Depth 5) `
+              -Body ($body | ConvertTo-Json -Depth 5) `
               -ContentType "application/json"
 
+            $assignments += @{
+              scriptId = $response.id
+              targetGroupId = $targetGroupId
+            }
 
-            Write-Host "Deployed $($script.Name)"
+            Write-Host "Deployed $($script.Name) with ID $($response.id)"
           }
 
+          # Save assignments to file
+          $assignmentsJson = $assignments | ConvertTo-Json -Depth 5
+          $outDir = "$(Pipeline.Workspace)/ScriptAssignments"
+          New-Item -ItemType Directory -Path $outDir -Force | Out-Null
+          $outPath = Join-Path $outDir "script-assignments.json"
+          $assignmentsJson | Out-File -Encoding utf8 -FilePath $outPath
+
+    - task: PublishPipelineArtifact@1
+      displayName: 'Publish ScriptAssignments'
+      inputs:
+        targetPath: '$(Pipeline.Workspace)/ScriptAssignments'
+        artifact: ScriptAssignments

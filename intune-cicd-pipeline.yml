@@ -18,14 +18,14 @@ pool:
 
 stages:
 
-# 1️⃣ Discover Script and Test Paths
+# Discover Script and Test Paths
 - stage: DiscoverFiles
   displayName: Discover Script & Test Files
   jobs:
   - template: templates/discover-files.yml
   
 
-# 2️⃣ Run Pester Tests
+# Run Pester Tests
 - stage: PesterTests
   displayName: Run Pester Tests
   dependsOn: DiscoverFiles
@@ -34,7 +34,7 @@ stages:
   jobs:
   - template: templates/test-pester.yml
 
-# 3️⃣ Run PSScriptAnalyzer
+# Run PSScriptAnalyzer
 - stage: PSScriptAnalyzer
   displayName: Run PSScriptAnalyzer
   dependsOn: DiscoverFiles
@@ -43,7 +43,7 @@ stages:
   jobs:
   - template: templates/lint-psscriptanalyzer.yml
 
-# 4️⃣ Deploy to Intune
+# Deploy to Intune
 - stage: DeployToIntune
   displayName: Deploy Scripts to Intune
   dependsOn:
@@ -53,10 +53,48 @@ stages:
   jobs:
   - template: templates/deploy-intune.yml
 
-# 5️⃣ Notify Slack
+
+# Assign Policies Stage
+- stage: AssignPolicies
+  displayName: Assign Scripts to Intune Device Group
+  dependsOn: DeployToIntune
+  condition: succeeded('DeployToIntune')
+  jobs:
+    - job: ParseAssignments
+      displayName: Parse Script Assignments JSON
+      pool:
+        name: Default
+      steps:
+        - download: current
+          artifact: ScriptAssignments
+
+        - task: PowerShell@2
+          name: SetAssignments
+          displayName: Parse and set script assignments output variable
+          inputs:
+            targetType: 'inline'
+            pwsh: true
+            script: |
+              $jsonPath = "$(Pipeline.Workspace)/ScriptAssignments/script-assignments.json"
+              Write-Host "Reading script assignments from $jsonPath"
+              $json = Get-Content -Raw -Path $jsonPath | ConvertFrom-Json
+              $jsonText = $json | ConvertTo-Json -Depth 5 -Compress
+              Write-Host "##vso[task.setvariable variable=ScriptAssignmentsJson;isOutput=true]$jsonText"
+
+    - template: templates/assign-policy.yml
+      parameters:
+        tenantId: $(TenantId)
+        clientId: $(ClientId)
+        clientSecret: $(clientsecret4053)
+        scriptAssignments: $[ dependencies.ParseAssignments.outputs['SetAssignments.ScriptAssignmentsJson'] ]
+
+
+# Notify Slack
 - stage: NotifySlack
   displayName: Notify Slack
   dependsOn: DeployToIntune
   condition: always()
   jobs:
   - template: templates/notify-slack.yml
+
+
