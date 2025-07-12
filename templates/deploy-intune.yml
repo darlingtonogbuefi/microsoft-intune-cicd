@@ -26,16 +26,25 @@ jobs:
           $clientSecret = "$(clientsecret4053)"
 
           
+          # Ensure Az.Accounts module is installed
           if (-not (Get-Module -ListAvailable -Name Az.Accounts)) {
-            Install-Module Az.Accounts -Force -Scope CurrentUser -AllowClobber
+              Install-Module Az.Accounts -Force -Scope CurrentUser -AllowClobber
           }
+
+          # Import Az.Accounts module if not already imported
+          if (-not (Get-Module -Name Az.Accounts)) {
+              Import-Module Az.Accounts
+          }
+
+          # Ensure Microsoft.Graph module is installed
           if (-not (Get-Module -ListAvailable -Name Microsoft.Graph)) {
-            Install-Module Microsoft.Graph -Force -Scope CurrentUser -AllowClobber
+              Install-Module Microsoft.Graph -Force -Scope CurrentUser -AllowClobber
           }
 
-          Import-Module Az.Accounts -Force
-          Import-Module Microsoft.Graph -Force
-
+          # Import Microsoft.Graph module if not already imported
+          if (-not (Get-Module -Name Microsoft.Graph)) {
+              Import-Module Microsoft.Graph
+          }
 
           $secureSecret = ConvertTo-SecureString $clientSecret -AsPlainText -Force
           $cred = New-Object System.Management.Automation.PSCredential ($clientId, $secureSecret)
