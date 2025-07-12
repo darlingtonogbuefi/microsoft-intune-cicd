@@ -2,8 +2,8 @@ trigger: none
 
 resources:
   pipelines:
-    - pipeline: azure-pipelines-tests
-      source: azure-pipelines-tests
+    - pipeline: Azure-Pipelines-TestIntuneScripts
+      source: Azure-Pipelines-TestIntuneScripts
       trigger:
         branches:
           include:
