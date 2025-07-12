@@ -76,6 +76,6 @@ jobs:
               -ContentType "application/json"
 
 
-            Write-Host "✅ Deployed $($script.Name)"
+            Write-Host "Deployed $($script.Name)"
           }
 

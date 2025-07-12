@@ -1,0 +1,74 @@
+parameters:
+  - name: scriptAssignments      # JSON string of deployed scripts [{scriptId, scriptName}]
+    type: string
+  - name: tenantId
+    type: string
+  - name: clientId
+    type: string
+  - name: clientSecret
+    type: string
+  - name: targetGroupId
+    type: string
+
+jobs:
+- job: AssignScripts
+  displayName: Assign Intune Scripts to Target Group
+  pool:
+    name: Default
+  steps:
+    - task: PowerShell@2
+      displayName: "Assign each script to group"
+      inputs:
+        targetType: inline
+        pwsh: true
+        script: |
+          $ErrorActionPreference = 'Stop'
+
+          $tenantId = '${{ parameters.tenantId }}'
+          $clientId = '${{ parameters.clientId }}'
+          $clientSecret = '${{ parameters.clientSecret }}'
+          $groupId = '${{ parameters.targetGroupId }}'
+
+          Write-Host "Using group ID: $groupId"
+
+          # Install Microsoft.Graph module if needed
+          if (-not (Get-Module -ListAvailable -Name Microsoft.Graph)) {
+            Install-Module Microsoft.Graph -Force -Scope CurrentUser -AllowClobber
+          }
+          Import-Module Microsoft.Graph
+
+          $secureSecret = ConvertTo-SecureString $clientSecret -AsPlainText -Force
+          Connect-MgGraph -ClientId $clientId -TenantId $tenantId -ClientSecret $secureSecret -Scopes "https://graph.microsoft.com/.default"
+
+          # Parse the script assignments JSON passed as parameter
+          $assignments = '${{ parameters.scriptAssignments }}' | ConvertFrom-Json
+
+          if (-not $assignments -or $assignments.Count -eq 0) {
+            Write-Error "No scripts found in scriptAssignments."
+            exit 1
+          }
+
+          foreach ($script in $assignments) {
+            $scriptId = $script.scriptId
+            $scriptName = $script.scriptName
+
+            Write-Host "`n📘 Assigning script '$scriptName' (ID: $scriptId) to group $groupId..."
+
+            $body = @{
+              assignments = @(
+                @{
+                  target = @{
+                    "@odata.type" = "#microsoft.graph.groupAssignmentTarget"
+                    groupId       = $groupId
+                  }
+                }
+              )
+            } | ConvertTo-Json -Depth 5
+
+            Invoke-MgGraphRequest -Method POST `
+              -Uri "https://graph.microsoft.com/beta/deviceManagement/deviceManagementScripts/$scriptId/assign" `
+              -Body $body `
+              -ContentType "application/json"
+
+            Write-Host "✅ Assigned '$scriptName'"
+          }
