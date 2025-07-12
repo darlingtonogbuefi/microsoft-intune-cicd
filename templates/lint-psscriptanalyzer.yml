@@ -9,24 +9,20 @@ jobs:
     - checkout: self
 
     - task: PowerShell@2
-      displayName: 'Install PSScriptAnalyzer'
+      displayName: 'Run PSScriptAnalyzer and Save Report'
       inputs:
-        targetType: inline
+        targetType: 'inline'
         pwsh: true
         script: |
           Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser -AllowClobber
 
-    - task: PowerShell@2
-      displayName: 'Analyze Scripts with PSScriptAnalyzer'
-      inputs:
-        targetType: inline
-        pwsh: true
-        script: |
           $scriptPaths = "$(SCRIPT_PATHS)" -split ';'
           $reportPath = "$(System.DefaultWorkingDirectory)/PSScriptAnalyzerResults.txt"
           $fail = $false
 
-          if (Test-Path $reportPath) { Remove-Item $reportPath -Force }
+          if (Test-Path $reportPath) {
+            Remove-Item $reportPath -Force
+          }
 
           foreach ($script in $scriptPaths) {
             Write-Host "Analyzing $script"
@@ -38,26 +34,32 @@ jobs:
 
               if ($errors) {
                 $fail = $true
-                "Errors found in ${script}:" | Out-File -Append $reportPath
-                $errors | Format-Table | Out-String | Out-File -Append $reportPath
+                "Errors found in ${script}:" | Out-File -Append -FilePath $reportPath
+                $errors | Format-Table -AutoSize | Out-String | Out-File -Append -FilePath $reportPath
+                Write-Warning "Errors found in ${script}"
               }
 
               if ($warnings) {
-                "Warnings in ${script}:" | Out-File -Append $reportPath
-                $warnings | Format-Table | Out-String | Out-File -Append $reportPath
+                "Warnings found in ${script}:" | Out-File -Append -FilePath $reportPath
+                $warnings | Format-Table -AutoSize | Out-String | Out-File -Append -FilePath $reportPath
+                Write-Host "Warnings found in ${script} (pipeline will not fail)"
               }
+            } else {
+              "No issues found in ${script}" | Out-File -Append -FilePath $reportPath
             }
           }
 
           Write-Host "##vso[task.setvariable variable=ANALYZER_FAILED]$fail"
 
           if ($fail) {
-            Write-Error "❌ Script Analyzer found errors."
+            Write-Error "❌ PSScriptAnalyzer found ERROR issues. See report."
             exit 1
+          } else {
+            Write-Host "✅ No ERROR issues found by PSScriptAnalyzer."
           }
 
     - task: PublishPipelineArtifact@1
-      displayName: 'Publish Script Analyzer Report'
+      displayName: 'Publish PSScriptAnalyzer Report'
       inputs:
         targetPath: '$(System.DefaultWorkingDirectory)/PSScriptAnalyzerResults.txt'
         artifactName: 'PSScriptAnalyzerReport'

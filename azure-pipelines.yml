@@ -29,7 +29,7 @@ stages:
   - template: templates/test-pester.yml
 
 - stage: PSScriptAnalyzerTests
-  dependsOn: DiscoverFiles
+  dependsOn: PesterTests
   condition: succeeded()
   jobs:
   - template: templates/lint-psscriptanalyzer.yml
