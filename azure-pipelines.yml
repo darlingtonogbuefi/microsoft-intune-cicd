@@ -23,7 +23,7 @@ stages:
   displayName: Discover Script & Test Files
   jobs:
   - template: templates/discover-files.yml
-    job: DiscoverFiles
+  
 
 # 2️⃣ Run Pester Tests
 - stage: PesterTests
