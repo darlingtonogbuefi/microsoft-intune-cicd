@@ -1,1 +1,1 @@
-# intune-cicd2
+# microsoft-intune-cicd
