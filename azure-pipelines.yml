@@ -1,0 +1,49 @@
+trigger:
+  branches:
+    include:
+      - main
+
+variables:
+- group: KeyVault-Secrets
+- group: notifications
+- name: SCRIPT_FOLDER
+  value: 'intune-scripts'
+- name: TEST_FOLDER
+  value: 'pester-tests'
+- name: TEST_RESULTS
+  value: 'Test-Pester.xml'
+
+pool:
+  name: Default
+
+stages:
+- stage: DiscoverFiles
+  displayName: Discover Script & Test Files
+  jobs:
+  - template: templates/discover-files.yml
+
+- stage: PesterTests
+  dependsOn: DiscoverFiles
+  condition: succeeded()
+  jobs:
+  - template: templates/test-pester.yml
+
+- stage: PSScriptAnalyzer
+  dependsOn: DiscoverFiles
+  condition: succeeded()
+  jobs:
+  - template: templates/lint-psscriptanalyzer.yml
+
+- stage: DeployToIntune
+  dependsOn: 
+    - PesterTests
+    - PSScriptAnalyzer
+  condition: succeeded()
+  jobs:
+  - template: templates/deploy-intune.yml
+
+- stage: NotifySlack
+  dependsOn: DeployToIntune
+  condition: always()
+  jobs:
+  - template: templates/notify-slack.yml

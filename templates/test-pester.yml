@@ -1,0 +1,83 @@
+parameters: {}
+
+jobs:
+- job: RunPesterTests
+  displayName: 'Run Pester Tests'
+  pool:
+    name: Default
+  steps:
+    - checkout: self
+
+    - task: PowerShell@2
+      displayName: 'Find Scripts and Test Files'
+      inputs:
+        targetType: inline
+        pwsh: true
+        script: |
+          $scriptFolder = "$(System.DefaultWorkingDirectory)/$(SCRIPT_FOLDER)"
+          $testFolder = "$(System.DefaultWorkingDirectory)/$(TEST_FOLDER)"
+
+          $scriptFiles = Get-ChildItem -Path $scriptFolder -Filter '*.ps1' -File | Where-Object { $_.Name -notlike '*Tests.ps1' }
+          $testFiles = Get-ChildItem -Path $testFolder -Filter '*.Tests.ps1' -File
+
+          if (-not $scriptFiles) {
+            Write-Error "No .ps1 scripts found in $scriptFolder"
+            exit 1
+          }
+          if (-not $testFiles) {
+            Write-Error "No *Tests.ps1 found in $testFolder"
+            exit 1
+          }
+
+          $scriptPaths = ($scriptFiles | ForEach-Object { $_.FullName }) -join ";"
+          $testPaths = ($testFiles | ForEach-Object { $_.FullName }) -join ";"
+
+          Write-Host "##vso[task.setvariable variable=SCRIPT_PATHS]$scriptPaths"
+          Write-Host "##vso[task.setvariable variable=TEST_PATHS]$testPaths"
+
+    - task: PowerShell@2
+      displayName: 'Install Latest Pester'
+      inputs:
+        targetType: inline
+        pwsh: true
+        script: |
+          Install-PackageProvider -Name NuGet -Force -Scope CurrentUser
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module -Name Pester -Force -Scope CurrentUser -AllowClobber
+
+    - task: PowerShell@2
+      displayName: 'Run Pester Tests'
+      inputs:
+        targetType: inline
+        pwsh: true
+        script: |
+          Import-Module Pester
+
+          $testPaths = "$(TEST_PATHS)" -split ';'
+          $failedTests = $false
+          $resultsPath = "$(System.DefaultWorkingDirectory)/$(TEST_RESULTS)"
+
+          $allResults = @()
+          foreach ($testFile in $testPaths) {
+            Write-Host "Running tests in $testFile"
+            if (-Not (Test-Path $testFile)) {
+              Write-Warning "Test file not found: $testFile"
+              continue
+            }
+
+            $result = Invoke-Pester -Path $testFile -PassThru -Verbose
+            $allResults += $result
+
+            if ($result.FailedCount -gt 0) {
+              $failedTests = $true
+            }
+          }
+
+          $allResults | Export-Clixml -Path $resultsPath
+          Write-Host "##vso[task.setvariable variable=TESTS_FAILED]$failedTests"
+
+    - task: PublishPipelineArtifact@1
+      displayName: 'Publish Pester Results'
+      inputs:
+        targetPath: '$(System.DefaultWorkingDirectory)/$(TEST_RESULTS)'
+        artifactName: 'PesterTestResults'

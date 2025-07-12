@@ -1,0 +1,63 @@
+parameters: {}
+
+jobs:
+- job: RunScriptAnalyzer
+  displayName: 'Run PSScriptAnalyzer'
+  pool:
+    name: Default
+  steps:
+    - checkout: self
+
+    - task: PowerShell@2
+      displayName: 'Install PSScriptAnalyzer'
+      inputs:
+        targetType: inline
+        pwsh: true
+        script: |
+          Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser -AllowClobber
+
+    - task: PowerShell@2
+      displayName: 'Analyze Scripts with PSScriptAnalyzer'
+      inputs:
+        targetType: inline
+        pwsh: true
+        script: |
+          $scriptPaths = "$(SCRIPT_PATHS)" -split ';'
+          $reportPath = "$(System.DefaultWorkingDirectory)/PSScriptAnalyzerResults.txt"
+          $fail = $false
+
+          if (Test-Path $reportPath) { Remove-Item $reportPath -Force }
+
+          foreach ($script in $scriptPaths) {
+            Write-Host "Analyzing $script"
+            $results = Invoke-ScriptAnalyzer -Path $script -Recurse -Severity Warning,Error
+
+            if ($results) {
+              $errors = $results | Where-Object { $_.Severity -eq 'Error' }
+              $warnings = $results | Where-Object { $_.Severity -eq 'Warning' }
+
+              if ($errors) {
+                $fail = $true
+                "Errors found in ${script}:" | Out-File -Append $reportPath
+                $errors | Format-Table | Out-String | Out-File -Append $reportPath
+              }
+
+              if ($warnings) {
+                "Warnings in ${script}:" | Out-File -Append $reportPath
+                $warnings | Format-Table | Out-String | Out-File -Append $reportPath
+              }
+            }
+          }
+
+          Write-Host "##vso[task.setvariable variable=ANALYZER_FAILED]$fail"
+
+          if ($fail) {
+            Write-Error "❌ Script Analyzer found errors."
+            exit 1
+          }
+
+    - task: PublishPipelineArtifact@1
+      displayName: 'Publish Script Analyzer Report'
+      inputs:
+        targetPath: '$(System.DefaultWorkingDirectory)/PSScriptAnalyzerResults.txt'
+        artifactName: 'PSScriptAnalyzerReport'

@@ -32,3 +32,5 @@ terraform.tfvars
 
 #old pipelines
 azure-pipelines-1.yml
+azure-pipelines-deploy.yml
+azure-pipelines-tests.yml
