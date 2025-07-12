@@ -37,7 +37,7 @@ stages:
 - stage: DeployToIntune
   dependsOn: 
     - PesterTests
-    - PSScriptAnalyzer
+    - PSScriptAnalyzerTests
   condition: succeeded()
   jobs:
   - template: templates/deploy-intune.yml
