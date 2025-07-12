@@ -28,7 +28,7 @@ stages:
   jobs:
   - template: templates/test-pester.yml
 
-- stage: PSScriptAnalyzer
+- stage: PSScriptAnalyzerTests
   dependsOn: DiscoverFiles
   condition: succeeded()
   jobs:
