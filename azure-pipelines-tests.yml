@@ -1,0 +1,21 @@
+trigger:
+  branches:
+    include:
+      - main
+
+variables:
+- group: KeyVault-Secrets
+- name: SCRIPT_FOLDER
+  value: 'intune-scripts'
+- name: TEST_FOLDER
+  value: 'pester-tests'
+- name: TEST_RESULTS
+  value: 'Test-Pester.xml'
+
+pool:
+  name: Default
+
+stages:
+- stage: TestAndLint
+  jobs:
+  - template: templates/test-and-lint.yml

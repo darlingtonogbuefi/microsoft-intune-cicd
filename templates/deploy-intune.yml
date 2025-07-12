@@ -1,0 +1,60 @@
+parameters: {}
+
+jobs:
+- job: DeployIntune
+  pool:
+    name: Default
+  steps:
+    - checkout: self
+
+    - task: PowerShell@2
+      displayName: 'Deploy Scripts to Intune (if all tests passed)'
+      inputs:
+        targetType: 'inline'
+        pwsh: true
+        script: |
+          $scriptFolder = "$(System.DefaultWorkingDirectory)/$(SCRIPT_FOLDER)"
+          $scriptFiles = Get-ChildItem -Path $scriptFolder -Filter '*.ps1' -File | Where-Object { $_.Name -notlike '*Tests.ps1' }
+
+          if (-not $scriptFiles) {
+            Write-Error "No scripts found to deploy."
+            exit 1
+          }
+
+          $tenantId = "$(TenantId)"
+          $clientId = "$(ClientId)"
+          $clientSecret = "$(clientsecret4053)"
+
+          Install-Module Az.Accounts -Force -Scope CurrentUser -AllowClobber
+          Install-Module Microsoft.Graph -Force -Scope CurrentUser -AllowClobber
+
+          Import-Module Az.Accounts
+          Import-Module Microsoft.Graph
+
+          $secureSecret = ConvertTo-SecureString $clientSecret -AsPlainText -Force
+          $cred = New-Object System.Management.Automation.PSCredential ($clientId, $secureSecret)
+
+          Connect-AzAccount -ServicePrincipal -TenantId $tenantId -Credential $cred
+          $token = (Get-AzAccessToken -TenantId $tenantId -ResourceUrl "https://graph.microsoft.com").Token
+          Connect-MgGraph -AccessToken $token
+
+          foreach ($script in $scriptFiles) {
+            $scriptContent = Get-Content -Raw -Path $script.FullName
+            $encodedScript = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($scriptContent))
+
+            $deviceManagementScript = @{
+              displayName           = [System.IO.Path]::GetFileNameWithoutExtension($script.FullName)
+              description           = "Deployed via Azure DevOps pipeline"
+              scriptContent         = $encodedScript
+              runFrequency          = "once"
+              enforceSignatureCheck = $false
+              runAs32Bit            = $true
+            }
+
+            Invoke-MgGraphRequest -Method POST `
+              -Uri "https://graph.microsoft.com/beta/deviceManagement/deviceManagementScripts" `
+              -Body ($deviceManagementScript | ConvertTo-Json -Depth 5) `
+              -ContentType "application/json"
+
+            Write-Host "✅ Deployed $($script.Name)"
+          }

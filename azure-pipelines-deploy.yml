@@ -1,0 +1,32 @@
+trigger: none
+
+resources:
+  pipelines:
+    - pipeline: testPipeline
+      source: azure-pipelines-tests
+      trigger:
+        branches:
+          include:
+            - main
+
+variables:
+- group: KeyVault-Secrets
+- group: notifications
+- name: SCRIPT_FOLDER
+  value: 'intune-scripts'
+- name: TEST_RESULTS
+  value: 'Test-Pester.xml'
+
+pool:
+  name: Default
+
+stages:
+- stage: DeployToIntune
+  jobs:
+  - template: templates/deploy-intune.yml
+
+- stage: NotifySlack
+  dependsOn: DeployToIntune
+  condition: always()
+  jobs:
+  - template: templates/notify-slack.yml

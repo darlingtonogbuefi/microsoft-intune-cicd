@@ -1,0 +1,18 @@
+parameters: {}
+
+jobs:
+- job: NotifySlack
+  steps:
+    - task: PowerShell@2
+      displayName: 'Send Slack Notification'
+      inputs:
+        targetType: 'inline'
+        pwsh: true
+        script: |
+          $webhookUrl = "$(SLACK_WEBHOOK_URL)"
+          $status = "$(Agent.JobStatus)"
+          $message = @{
+            text = ":rocket: Azure DevOps Pipeline Notification - *$status*"
+          } | ConvertTo-Json -Depth 2
+
+          Invoke-RestMethod -Method Post -Uri $webhookUrl -ContentType 'application/json' -Body $message
