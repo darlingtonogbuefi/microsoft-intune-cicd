@@ -1,6 +1,3 @@
-#intune-cicd-pipeline.yml (main yaml)
-
-
 trigger:
   branches:
     include:
@@ -9,7 +6,6 @@ trigger:
 variables:
 - group: KeyVault-Secrets
 - group: notifications
-- group: targetgroupid
 - name: SCRIPT_FOLDER
   value: 'intune-scripts'
 - name: TEST_FOLDER
@@ -22,14 +18,14 @@ pool:
 
 stages:
 
-# Discover Script and Test Paths
+# 1️⃣ Discover Script and Test Paths
 - stage: DiscoverFiles
   displayName: Discover Script & Test Files
   jobs:
   - template: templates/discover-files.yml
   
 
-# Run Pester Tests
+# 2️⃣ Run Pester Tests
 - stage: PesterTests
   displayName: Run Pester Tests
   dependsOn: DiscoverFiles
@@ -38,7 +34,7 @@ stages:
   jobs:
   - template: templates/test-pester.yml
 
-# Run PSScriptAnalyzer
+# 3️⃣ Run PSScriptAnalyzer
 - stage: PSScriptAnalyzer
   displayName: Run PSScriptAnalyzer
   dependsOn: DiscoverFiles
@@ -47,7 +43,7 @@ stages:
   jobs:
   - template: templates/lint-psscriptanalyzer.yml
 
-# Deploy to Intune
+# 4️⃣ Deploy to Intune
 - stage: DeployToIntune
   displayName: Deploy Scripts to Intune
   dependsOn:
@@ -57,15 +53,7 @@ stages:
   jobs:
   - template: templates/deploy-intune.yml
 
-
-- stage: AssignPolicy
-  displayName: Assign Scripts to Groups in Intune
-  dependsOn: DeployToIntune
-  condition: succeeded()
-  jobs:
-  - template: templates/assign-policy.yml
-
-# Notify Slack
+# 5️⃣ Notify Slack
 - stage: NotifySlack
   displayName: Notify Slack
   dependsOn: DeployToIntune

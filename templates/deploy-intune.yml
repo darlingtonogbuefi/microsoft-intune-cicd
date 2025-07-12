@@ -73,31 +73,12 @@ jobs:
             }
 
 
-            $response = Invoke-MgGraphRequest -Method POST `
+            Invoke-MgGraphRequest -Method POST `
               -Uri "https://graph.microsoft.com/beta/deviceManagement/deviceManagementScripts" `
               -Body ($deviceManagementScript | ConvertTo-Json -Depth 5) `
               -ContentType "application/json"
 
-            $scriptId = $response.id
-            $groupId = "$(TargetGroupId)"
 
-            $assignments += @{
-              scriptId      = $scriptId
-              targetGroupId = $groupId
-            }
-
-            Write-Host "Deployed $($script.Name) with ID $scriptId"
+            Write-Host "Deployed $($script.Name)"
           }
 
-          $assignmentsJson = $assignments | ConvertTo-Json -Depth 5
-
-          $outDir = "$(Pipeline.Workspace)/ScriptAssignments"
-          New-Item -ItemType Directory -Path $outDir -Force | Out-Null
-          $outPath = Join-Path $outDir "script-assignments.json"
-          $assignmentsJson | Out-File -Encoding utf8 -FilePath $outPath
-
-    - task: PublishPipelineArtifact@1
-      displayName: 'Publish ScriptAssignments'
-      inputs:
-        targetPath: '$(Pipeline.Workspace)/ScriptAssignments'
-        artifact: ScriptAssignments
