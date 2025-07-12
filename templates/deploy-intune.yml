@@ -35,18 +35,21 @@ jobs:
 
           Import-Module Az.Accounts -Force
           Import-Module Microsoft.Graph -Force
-          
+
 
           $secureSecret = ConvertTo-SecureString $clientSecret -AsPlainText -Force
           $cred = New-Object System.Management.Automation.PSCredential ($clientId, $secureSecret)
+
 
           Connect-AzAccount -ServicePrincipal -TenantId $tenantId -Credential $cred
           $token = (Get-AzAccessToken -TenantId $tenantId -ResourceUrl "https://graph.microsoft.com").Token
           Connect-MgGraph -AccessToken $token
 
+
           foreach ($script in $scriptFiles) {
             $scriptContent = Get-Content -Raw -Path $script.FullName
             $encodedScript = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($scriptContent))
+
 
             $deviceManagementScript = @{
               displayName           = [System.IO.Path]::GetFileNameWithoutExtension($script.FullName)
@@ -57,10 +60,12 @@ jobs:
               runAs32Bit            = $true
             }
 
+
             Invoke-MgGraphRequest -Method POST `
               -Uri "https://graph.microsoft.com/beta/deviceManagement/deviceManagementScripts" `
               -Body ($deviceManagementScript | ConvertTo-Json -Depth 5) `
               -ContentType "application/json"
+
 
             Write-Host "✅ Deployed $($script.Name)"
           }

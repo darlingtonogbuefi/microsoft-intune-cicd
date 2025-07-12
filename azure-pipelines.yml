@@ -37,7 +37,7 @@ stages:
 # 3️⃣ Run PSScriptAnalyzer
 - stage: PSScriptAnalyzer
   displayName: Run PSScriptAnalyzer
-  dependsOn: PesterTests
+  dependsOn: DiscoverFiles
   variables:
     SCRIPT_PATHS: $[ stageDependencies.DiscoverFiles.DiscoverFiles.outputs['SetVars.SCRIPT_PATHS'] ]
   jobs:
