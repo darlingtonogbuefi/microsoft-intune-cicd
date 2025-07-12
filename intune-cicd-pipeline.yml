@@ -18,14 +18,14 @@ pool:
 
 stages:
 
-# 1️⃣ Discover Script and Test Paths
+# Discover Script and Test Paths
 - stage: DiscoverFiles
   displayName: Discover Script & Test Files
   jobs:
   - template: templates/discover-files.yml
   
 
-# 2️⃣ Run Pester Tests
+# Run Pester Tests
 - stage: PesterTests
   displayName: Run Pester Tests
   dependsOn: DiscoverFiles
@@ -34,7 +34,7 @@ stages:
   jobs:
   - template: templates/test-pester.yml
 
-# 3️⃣ Run PSScriptAnalyzer
+# Run PSScriptAnalyzer
 - stage: PSScriptAnalyzer
   displayName: Run PSScriptAnalyzer
   dependsOn: DiscoverFiles
@@ -43,7 +43,7 @@ stages:
   jobs:
   - template: templates/lint-psscriptanalyzer.yml
 
-# 4️⃣ Deploy to Intune
+# Deploy to Intune
 - stage: DeployToIntune
   displayName: Deploy Scripts to Intune
   dependsOn:
@@ -53,7 +53,7 @@ stages:
   jobs:
   - template: templates/deploy-intune.yml
 
-# 5️⃣ Notify Slack
+# Notify Slack
 - stage: NotifySlack
   displayName: Notify Slack
   dependsOn: DeployToIntune

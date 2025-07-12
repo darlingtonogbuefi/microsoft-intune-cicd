@@ -42,9 +42,9 @@ function Invoke-GraphPost {
         }
 
         Invoke-RestMethod -Method POST -Uri $Uri -Headers $headers -Body $Body
-        Write-Output "✅ Policy posted to $Uri"
+        Write-Output "Policy posted to $Uri"
     } catch {
-        Write-Error "❌ Failed to POST to $Uri"
+        Write-Error "Failed to POST to $Uri"
         Write-Error $_.Exception.Message
         exit 1
     }
@@ -143,8 +143,8 @@ $token = Get-GraphToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $C
 
 $uriBase = "https://graph.microsoft.com/beta/deviceAppManagement/managedAppPolicies"
 
-Write-Output "🚀 Deploying iOS Managed App Policy..."
+Write-Output "Deploying iOS Managed App Policy..."
 Invoke-GraphPost -Uri $uriBase -Token $token -Body $iOSPolicy
 
-Write-Output "🚀 Deploying Android Managed App Policy..."
+Write-Output "Deploying Android Managed App Policy..."
 Invoke-GraphPost -Uri $uriBase -Token $token -Body $androidPolicy

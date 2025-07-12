@@ -60,9 +60,9 @@ $mdeStatus         = Get-MDESensorStatus
 Write-Output "`n===== Defender Status Summary ====="
 
 if ($defenderServiceOK) {
-    Write-Output "✔ Microsoft Defender Antivirus service is running."
+    Write-Output "Microsoft Defender Antivirus service is running."
 } else {
-    Write-Output "✘ Microsoft Defender Antivirus service is NOT running."
+    Write-Output "Microsoft Defender Antivirus service is NOT running."
 }
 
 if ($mdeSensorOK) {
@@ -73,22 +73,22 @@ if ($mdeSensorOK) {
 
 if ($defenderStatus) {
     if ($defenderStatus.RealTimeProtectionEnabled) {
-        Write-Output "✔ Real-time protection is enabled."
+        Write-Output "Real-time protection is enabled."
     } else {
-        Write-Output "✘ Real-time protection is DISABLED."
+        Write-Output "Real-time protection is DISABLED."
     }
 
     if ($defenderStatus.AntivirusSignatureUpdated) {
-        Write-Output "✔ Antivirus definitions are up to date."
+        Write-Output "Antivirus definitions are up to date."
     } else {
-        Write-Output "✘ Antivirus definitions are OUTDATED."
+        Write-Output "Antivirus definitions are OUTDATED."
     }
 
     Write-Output "Antivirus Signature Version: $($defenderStatus.SignatureVersion)"
     Write-Output "Last Quick Scan: $($defenderStatus.QuickScanEndTime)"
     Write-Output "Last Full Scan: $($defenderStatus.FullScanEndTime)"
 } else {
-    Write-Output "✘ Defender status information not available."
+    Write-Output "Defender status information not available."
 }
 
 if ($mdeStatus) {
@@ -98,7 +98,7 @@ if ($mdeStatus) {
     Write-Output "  - OrgId: $($mdeStatus.OrgId)"
     Write-Output "  - DeviceName: $($mdeStatus.DeviceName)"
 } else {
-    Write-Output "✘ MDE registry status not found. Sensor may not be installed."
+    Write-Output "MDE registry status not found. Sensor may not be installed."
 }
 
-Write-Output "`n✅ Check completed."
+Write-Output "`nCheck completed."
