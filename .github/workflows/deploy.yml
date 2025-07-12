@@ -1,0 +1,101 @@
+name: Deploy Azure DevOps Agent Resources
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    outputs:
+      vm_ip: ${{ steps.get_ip.outputs.vm_ip }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.7
+
+      - name: Create Resource Group for TF State
+        run: |
+          echo "🔧 Creating Resource Group for Terraform state..."
+          az group create --name tfstate-rg --location eastus || echo "Resource group already exists"
+
+      - name: Create Storage Account for TF State
+        run: |
+          echo "📦 Creating Storage Account for Terraform state..."
+          az storage account create \
+            --name tfstatestorage4053 \
+            --resource-group tfstate-rg \
+            --location eastus \
+            --sku Standard_LRS \
+            --kind StorageV2 \
+            || echo "Storage account already exists"
+
+      - name: Get Storage Account Key
+        id: get_key
+        run: |
+          echo "🔑 Fetching storage account key..."
+          echo "key=$(az storage account keys list --resource-group tfstate-rg --account-name tfstatestorage4053 --query '[0].value' -o tsv)" >> $GITHUB_OUTPUT
+
+      - name: Create Blob Container for TF State
+        run: |
+          echo "🪣 Creating blob container for Terraform state..."
+          az storage container create \
+            --name tfstate \
+            --account-name tfstatestorage4053 \
+            --account-key ${{ steps.get_key.outputs.key }} \
+            || echo "Container already exists"
+
+      - name: Terraform Init
+        env:
+          ARM_ACCESS_KEY: ${{ steps.get_key.outputs.key }}
+        run: |
+          echo "🚀 Initializing Terraform..."
+          terraform init -input=false
+
+      - name: Terraform Apply
+        env:
+          TF_LOG: DEBUG
+          TF_LOG_PATH: ./terraform.log
+
+          ARM_ACCESS_KEY: ${{ steps.get_key.outputs.key }}
+          ARM_SUBSCRIPTION_ID: ${{ fromJson(secrets.AZURE_CREDENTIALS).subscriptionId }}
+          ARM_CLIENT_ID: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientId }}
+          ARM_CLIENT_SECRET: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientSecret }}
+          ARM_TENANT_ID: ${{ fromJson(secrets.AZURE_CREDENTIALS).tenantId }}
+
+          TF_VAR_subscription_id: ${{ fromJson(secrets.AZURE_CREDENTIALS).subscriptionId }}
+          TF_VAR_client_id: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientId }}
+          TF_VAR_client_secret: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientSecret }}
+          TF_VAR_tenant_id: ${{ fromJson(secrets.AZURE_CREDENTIALS).tenantId }}
+          TF_VAR_azure_devops_url: ${{ secrets.AZDO_ORG_URL }}
+          TF_VAR_pat_token: ${{ secrets.AZDO_PAT }}
+          TF_VAR_admin_username: ${{ secrets.VM_ADMIN_USERNAME }}
+          TF_VAR_admin_password: ${{ secrets.VM_ADMIN_PASSWORD }}
+          TF_VAR_azure_devops_sp_object_id: ${{ secrets.AZURE_DEVOPS_SP_OBJECT_ID }}
+
+        run: |
+          set -o pipefail   # <- THIS ensures pipeline fails if any command fails
+          terraform apply -auto-approve -input=false 2>&1 | tee terraform-output.log
+
+      - name: Get VM Public IP
+        id: get_ip
+        env:
+          ARM_ACCESS_KEY: ${{ steps.get_key.outputs.key }}
+          ARM_SUBSCRIPTION_ID: ${{ fromJson(secrets.AZURE_CREDENTIALS).subscriptionId }}
+          ARM_CLIENT_ID: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientId }}
+          ARM_CLIENT_SECRET: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientSecret }}
+          ARM_TENANT_ID: ${{ fromJson(secrets.AZURE_CREDENTIALS).tenantId }}
+        run: |
+          echo "🌐 Fetching VM public IP..."
+          IP=$(terraform output -raw agent_public_ip -no-color | tr -d '\r\n')
+          echo "vm_ip=$IP" >> "$GITHUB_OUTPUT"
+          echo "::notice::✅ VM Public IP: $IP"
