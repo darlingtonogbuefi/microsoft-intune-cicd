@@ -17,32 +17,45 @@ pool:
   name: Default
 
 stages:
+
+# 1️⃣ Discover Script and Test Paths
 - stage: DiscoverFiles
   displayName: Discover Script & Test Files
   jobs:
   - template: templates/discover-files.yml
+    job: DiscoverFiles
 
+# 2️⃣ Run Pester Tests
 - stage: PesterTests
+  displayName: Run Pester Tests
   dependsOn: DiscoverFiles
-  condition: succeeded()
+  variables:
+    TEST_PATHS: $[ stageDependencies.DiscoverFiles.DiscoverFiles.outputs['SetVars.TEST_PATHS'] ]
   jobs:
   - template: templates/test-pester.yml
 
-- stage: PSScriptAnalyzerTests
-  dependsOn: PesterTests
-  condition: succeeded()
+# 3️⃣ Run PSScriptAnalyzer
+- stage: PSScriptAnalyzer
+  displayName: Run PSScriptAnalyzer
+  dependsOn: DiscoverFiles
+  variables:
+    SCRIPT_PATHS: $[ stageDependencies.DiscoverFiles.DiscoverFiles.outputs['SetVars.SCRIPT_PATHS'] ]
   jobs:
   - template: templates/lint-psscriptanalyzer.yml
 
+# 4️⃣ Deploy to Intune
 - stage: DeployToIntune
-  dependsOn: 
+  displayName: Deploy Scripts to Intune
+  dependsOn:
     - PesterTests
-    - PSScriptAnalyzerTests
-  condition: succeeded()
+    - PSScriptAnalyzer
+  condition: and(succeeded('PesterTests'), succeeded('PSScriptAnalyzer'))
   jobs:
   - template: templates/deploy-intune.yml
 
+# 5️⃣ Notify Slack
 - stage: NotifySlack
+  displayName: Notify Slack
   dependsOn: DeployToIntune
   condition: always()
   jobs:
