@@ -1,8 +1,9 @@
-<# 
+<#
 .SYNOPSIS
 Deploys Managed App Protection policies (iOS & Android) to Intune using Microsoft Graph via Service Principal.
 #>
 
+[CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)][string]$TenantId,
     [Parameter(Mandatory = $true)][string]$ClientId,
@@ -10,6 +11,12 @@ param(
 )
 
 function Get-GraphToken {
+    param (
+        [string]$TenantId,
+        [string]$ClientId,
+        [string]$ClientSecret
+    )
+
     $body = @{
         grant_type    = "client_credentials"
         client_id     = $ClientId
@@ -35,7 +42,7 @@ function Invoke-GraphPost {
         }
 
         Invoke-RestMethod -Method POST -Uri $Uri -Headers $headers -Body $Body
-        Write-Host "✅ Policy posted to $Uri"
+        Write-Output "✅ Policy posted to $Uri"
     } catch {
         Write-Error "❌ Failed to POST to $Uri"
         Write-Error $_.Exception.Message
@@ -132,12 +139,12 @@ $androidPolicy = @"
 "@
 
 # Authenticate and post policies
-$token = Get-GraphToken
+$token = Get-GraphToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret
 
 $uriBase = "https://graph.microsoft.com/beta/deviceAppManagement/managedAppPolicies"
 
-Write-Host "🚀 Deploying iOS Managed App Policy..."
+Write-Output "🚀 Deploying iOS Managed App Policy..."
 Invoke-GraphPost -Uri $uriBase -Token $token -Body $iOSPolicy
 
-Write-Host "🚀 Deploying Android Managed App Policy..."
+Write-Output "🚀 Deploying Android Managed App Policy..."
 Invoke-GraphPost -Uri $uriBase -Token $token -Body $androidPolicy
