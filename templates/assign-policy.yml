@@ -3,7 +3,6 @@ parameters:
   clientId: ''
   clientSecret: ''
   targetGroupId: ''
-  scriptAssignments: ''
 
 jobs:
 - job: AssignIntuneScripts
@@ -16,7 +15,6 @@ jobs:
     - task: PowerShell@2
       displayName: 'Assign each script to device group'
       env:
-        SCRIPT_ASSIGNMENTS: ${{ parameters.scriptAssignments }}
         TENANT_ID: ${{ parameters.tenantId }}
         CLIENT_ID: ${{ parameters.clientId }}
         CLIENT_SECRET: ${{ parameters.clientSecret }}
@@ -31,7 +29,15 @@ jobs:
           $clientId = $env:CLIENT_ID
           $clientSecret = $env:CLIENT_SECRET
           $passedGroupId = $env:TARGET_GROUP_ID
-          $assignmentsJson = $env:SCRIPT_ASSIGNMENTS
+
+          $assignmentsPath = "$(Pipeline.Workspace)/ScriptAssignments/script-assignments.json"
+
+          if (-not (Test-Path $assignmentsPath)) {
+            Write-Error "Script assignments file not found at: $assignmentsPath"
+            exit 1
+          }
+
+          $assignmentsJson = Get-Content -Raw -Path $assignmentsPath
           $assignments = $assignmentsJson | ConvertFrom-Json
 
           if (-not (Get-Module -ListAvailable -Name Microsoft.Graph)) {
