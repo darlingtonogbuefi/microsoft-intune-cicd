@@ -3,7 +3,7 @@ parameters:
   clientId: ''
   clientSecret: ''
   targetGroupId: ''
-  scriptAssignments: ''
+  scriptAssignments: ''  # <<< CHANGED: Added parameter for script assignments
 
 jobs:
 - job: AssignIntuneScripts
@@ -20,6 +20,7 @@ jobs:
         CLIENT_ID: ${{ parameters.clientId }}
         CLIENT_SECRET: ${{ parameters.clientSecret }}
         TARGET_GROUP_ID: ${{ parameters.targetGroupId }}
+        SCRIPT_ASSIGNMENTS_JSON: ${{ parameters.scriptAssignments }}  # <<< CHANGED: Pass script assignments safely via env var
       inputs:
         targetType: 'inline'
         pwsh: true
@@ -32,7 +33,12 @@ jobs:
           $passedGroupId = $env:TARGET_GROUP_ID
 
           # Deserialize script assignments JSON passed from pipeline
-          $assignmentsJson = '${{ parameters.scriptAssignments }}'
+          $assignmentsJson = $env:SCRIPT_ASSIGNMENTS_JSON  # <<< CHANGED: Safe JSON handling
+          if (-not $assignmentsJson) {
+              Write-Error "Script assignments JSON is missing."
+              exit 1
+          }
+
           $assignments = $assignmentsJson | ConvertFrom-Json
 
           if (-not (Get-Module -ListAvailable -Name Microsoft.Graph)) {
@@ -58,8 +64,9 @@ jobs:
               Write-Host "Assigning Script $scriptId to Group $groupId..."
 
               $payload = @{
-                  deviceManagementScriptGroupAssignments = @(
+                  deviceManagementScriptGroupAssignments = @(  # <<< CHANGED: Correct Graph property name
                       @{
+                          "@odata.type" = "#microsoft.graph.deviceManagementScriptGroupAssignment"  # <<< CHANGED: Required type annotation
                           targetGroupId = $groupId
                       }
                   )
