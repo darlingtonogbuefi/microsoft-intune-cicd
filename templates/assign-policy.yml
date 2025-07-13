@@ -1,55 +1,43 @@
 parameters:
-  tenantId: ''
-  clientId: ''
-  clientSecret: ''
-  targetGroupId: ''
-  scriptAssignments: ''
+  - name: tenantId
+    type: string
+  - name: clientId
+    type: string
+  - name: clientSecret
+    type: string
+  - name: targetGroupId
+    type: string
+  - name: scriptIds
+    type: string  # comma-separated string of script IDs
 
 jobs:
-- job: AssignIntuneScripts
-  displayName: Assign Scripts to Intune Group
+- job: AssignScripts
   pool:
     name: Default
   steps:
-    - checkout: self
-
     - task: PowerShell@2
-      displayName: 'Assign each script to device group'
-      env:
-        TENANT_ID: ${{ parameters.tenantId }}
-        CLIENT_ID: ${{ parameters.clientId }}
-        CLIENT_SECRET: ${{ parameters.clientSecret }}
-        TARGET_GROUP_ID: ${{ parameters.targetGroupId }}
-        SCRIPT_ASSIGNMENTS_JSON: '${{ parameters.scriptAssignments }}'  # <--- ADD this line
+      displayName: 'Assign scripts to Intune group'
       inputs:
         targetType: 'inline'
         pwsh: true
         script: |
-          $ErrorActionPreference = "Stop"
+          $tenantId = '${{ parameters.tenantId }}'
+          $clientId = '${{ parameters.clientId }}'
+          $clientSecret = '${{ parameters.clientSecret }}'
+          $groupId = '${{ parameters.targetGroupId }}'
 
-          $tenantId = $env:TENANT_ID
-          $clientId = $env:CLIENT_ID
-          $clientSecret = $env:CLIENT_SECRET
-          $passedGroupId = $env:TARGET_GROUP_ID
+          $scriptIds = '${{ parameters.scriptIds }}'.Split(',')
 
-          # 🔽 Parse raw JSON string directly
-          $assignmentsJson = $env:SCRIPT_ASSIGNMENTS_JSON -replace @'^[\"']|[\"']$'@, ''
-
-          try {
-          $assignments = $assignmentsJson | ConvertFrom-Json
-          } catch {
-          Write-Error "Failed to parse raw JSON scriptAssignments: $_"
-           exit 1
+          if (-not (Get-Module -ListAvailable -Name Az.Accounts)) {
+              Install-Module Az.Accounts -Force -Scope CurrentUser -AllowClobber
           }
+          Import-Module Az.Accounts
 
-
-          # 🔽 Ensure Graph module
           if (-not (Get-Module -ListAvailable -Name Microsoft.Graph)) {
               Install-Module Microsoft.Graph -Force -Scope CurrentUser -AllowClobber
           }
           Import-Module Microsoft.Graph
 
-          # 🔽 Auth & connect
           $secureSecret = ConvertTo-SecureString $clientSecret -AsPlainText -Force
           $cred = New-Object System.Management.Automation.PSCredential ($clientId, $secureSecret)
 
@@ -57,27 +45,19 @@ jobs:
           $token = (Get-AzAccessToken -TenantId $tenantId -ResourceUrl "https://graph.microsoft.com").Token
           Connect-MgGraph -AccessToken $token
 
-          # 🔽 Assign scripts
-          foreach ($assignment in $assignments) {
-              $scriptId = $assignment.scriptId
-              $groupId = if ($assignment.PSObject.Properties.Name -contains 'targetGroupId') {
-                  $assignment.targetGroupId
-              } else {
-                  $passedGroupId
-              }
+          foreach ($scriptId in $scriptIds) {
+            $body = @{
+              deviceManagementScriptGroupAssignments = @(
+                @{
+                  '@odata.type' = '#microsoft.graph.deviceManagementScriptGroupAssignment'
+                  id = [guid]::NewGuid().ToString()
+                  targetGroupId = $groupId
+                }
+              )
+            } | ConvertTo-Json -Depth 5
 
-              Write-Host "Assigning Script $scriptId to Group $groupId..."
+            $uri = "https://graph.microsoft.com/beta/deviceManagement/deviceManagementScripts/$scriptId/assign"
 
-              $payload = @{
-                  deviceManagementScriptGroupAssignments = @(
-                      @{
-                          targetGroupId = $groupId
-                      }
-                  )
-              }
-
-              Invoke-MgGraphRequest -Method POST `
-                -Uri "https://graph.microsoft.com/beta/deviceManagement/deviceManagementScripts/$scriptId/assign" `
-                -Body ($payload | ConvertTo-Json -Depth 5) `
-                -ContentType "application/json"
+            Invoke-MgGraphRequest -Method POST -Uri $uri -Body $body -ContentType "application/json"
+            Write-Host "Assigned script $scriptId to group $groupId"
           }

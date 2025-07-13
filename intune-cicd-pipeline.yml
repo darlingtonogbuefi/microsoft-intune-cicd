@@ -63,17 +63,18 @@ stages:
           script: |
             $jsonPath = "$(Pipeline.Workspace)/ScriptAssignments/script-assignments.json"
             $json = Get-Content -Raw -Path $jsonPath | ConvertFrom-Json
-            $jsonText = $json | ConvertTo-Json -Depth 5 -Compress
-            $encoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($jsonText))
-            Write-Host "##vso[task.setvariable variable=ScriptAssignmentsEncoded;isOutput=true]$encoded"
+            # Extract array of script IDs
+            $scriptIds = $json | ForEach-Object { $_.scriptId }
+            $scriptIdsString = $scriptIds -join ','
+            Write-Host "##vso[task.setvariable variable=scriptIds;isOutput=true]$scriptIdsString"
 
   - template: templates/assign-policy.yml
     parameters:
       tenantId: $(TenantId)
       clientId: $(ClientId)
       clientSecret: $(clientsecret4053)
-      targetGroupId: $(TargetGroupId)
-      scriptAssignments: $[ dependencies.ParseAssignments.outputs['SetAssignments.ScriptAssignmentsJson'] ]
+      targetGroupId: $(intunegroupid)       # from variable group 'targetgroupid'
+      scriptIds: $[ dependencies.ParseAssignments.outputs['SetAssignments.scriptIds'] ]
 
 
 - stage: NotifyMsTeamsAndSlack
