@@ -6,7 +6,7 @@ trigger:
 variables:
 - group: KeyVault-Secrets
 - group: notifications
-- group: targetgroupid        # <-- Added this line to include TargetGroupId variable group
+- group: targetgroupid        # <-- Includes TargetGroupId variable group
 - name: SCRIPT_FOLDER
   value: 'intune-scripts'
 - name: TEST_FOLDER
@@ -24,7 +24,6 @@ stages:
   displayName: Discover Script & Test Files
   jobs:
   - template: templates/discover-files.yml
-  
 
 # Run Pester Tests
 - stage: PesterTests
@@ -54,6 +53,16 @@ stages:
   jobs:
   - template: templates/deploy-intune.yml
 
+    # ✅ CHANGED: Added this job to publish ScriptAssignments artifact
+  - job: PublishScriptAssignments                 # <-- CHANGED
+    displayName: Publish ScriptAssignments Artifact  # <-- CHANGED
+    dependsOn: []                                 # <-- CHANGED
+    pool:
+      name: Default
+    steps:
+      - publish: $(Pipeline.Workspace)/ScriptAssignments   # <-- CHANGED
+        artifact: ScriptAssignments                        # <-- CHANGED
+        displayName: 'Publish ScriptAssignments artifact'  # <-- CHANGED
 
 # Assign Policies Stage
 - stage: AssignPolicies
@@ -87,9 +96,8 @@ stages:
         tenantId: $(TenantId)
         clientId: $(ClientId)
         clientSecret: $(clientsecret4053)
-        targetGroupId: $(TargetGroupId)               # <-- Added this param to pass TargetGroupId to template
+        targetGroupId: $(TargetGroupId)
         scriptAssignments: $[ dependencies.ParseAssignments.outputs['SetAssignments.ScriptAssignmentsJson'] ]
-
 
 # Notify Slack
 - stage: NotifySlack
