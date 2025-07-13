@@ -46,8 +46,6 @@ jobs:
 
           foreach ($assignment in $assignments) {
               $scriptId = $assignment.scriptId
-
-              # Use assignment's group if present, otherwise use passed targetGroupId parameter
               $groupId = if ($assignment.PSObject.Properties.Name -contains 'targetGroupId') {
                   $assignment.targetGroupId
               } else {

@@ -6,7 +6,7 @@ trigger:
 variables:
 - group: KeyVault-Secrets
 - group: notifications
-- group: targetgroupid        # <-- Includes TargetGroupId variable group
+- group: targetgroupid
 - name: SCRIPT_FOLDER
   value: 'intune-scripts'
 - name: TEST_FOLDER
@@ -18,91 +18,58 @@ pool:
   name: Default
 
 stages:
-
-# Discover Script and Test Paths
 - stage: DiscoverFiles
   displayName: Discover Script & Test Files
   jobs:
   - template: templates/discover-files.yml
 
-# Run Pester Tests
 - stage: PesterTests
-  displayName: Run Pester Tests
   dependsOn: DiscoverFiles
   variables:
     TEST_PATHS: $[ stageDependencies.DiscoverFiles.DiscoverFiles.outputs['SetVars.TEST_PATHS'] ]
   jobs:
   - template: templates/test-pester.yml
 
-# Run PSScriptAnalyzer
 - stage: PSScriptAnalyzer
-  displayName: Run PSScriptAnalyzer
   dependsOn: DiscoverFiles
   variables:
     SCRIPT_PATHS: $[ stageDependencies.DiscoverFiles.DiscoverFiles.outputs['SetVars.SCRIPT_PATHS'] ]
   jobs:
   - template: templates/lint-psscriptanalyzer.yml
 
-# Deploy to Intune
 - stage: DeployToIntune
-  displayName: Deploy Scripts to Intune
-  dependsOn:
+  dependsOn: 
     - PesterTests
     - PSScriptAnalyzer
   condition: and(succeeded('PesterTests'), succeeded('PSScriptAnalyzer'))
   jobs:
   - template: templates/deploy-intune.yml
 
-    # ✅ CHANGED: Added this job to publish ScriptAssignments artifact
-  - job: PublishScriptAssignments                 # <-- CHANGED
-    displayName: Publish ScriptAssignments Artifact  # <-- CHANGED
-    dependsOn: []                                 # <-- CHANGED
-    pool:
-      name: Default
-    steps:
-      - publish: $(Pipeline.Workspace)/ScriptAssignments   # <-- CHANGED
-        artifact: ScriptAssignments                        # <-- CHANGED
-        displayName: 'Publish ScriptAssignments artifact'  # <-- CHANGED
-
-# Assign Policies Stage
 - stage: AssignPolicies
-  displayName: Assign Scripts to Intune Device Group
   dependsOn: DeployToIntune
   condition: succeeded('DeployToIntune')
   jobs:
-    - job: ParseAssignments
-      displayName: Parse Script Assignments JSON
-      pool:
-        name: Default
-      steps:
-        - download: current
-          artifact: ScriptAssignments
+  - job: ParseAssignments
+    displayName: Parse Script Assignments
+    steps:
+      - download: current
+        artifact: ScriptAssignments
 
-        - task: PowerShell@2
-          name: SetAssignments
-          displayName: Parse and set script assignments output variable
-          inputs:
-            targetType: 'inline'
-            pwsh: true
-            script: |
-              $jsonPath = "$(Pipeline.Workspace)/ScriptAssignments/script-assignments.json"
-              Write-Host "Reading script assignments from $jsonPath"
-              $json = Get-Content -Raw -Path $jsonPath | ConvertFrom-Json
-              $jsonText = $json | ConvertTo-Json -Depth 5 -Compress
-              Write-Host "##vso[task.setvariable variable=ScriptAssignmentsJson;isOutput=true]$jsonText"
+      - task: PowerShell@2
+        name: SetAssignments
+        inputs:
+          targetType: 'inline'
+          pwsh: true
+          script: |
+            $jsonPath = "$(Pipeline.Workspace)/ScriptAssignments/script-assignments.json"
+            $json = Get-Content -Raw -Path $jsonPath | ConvertFrom-Json
+            $jsonText = $json | ConvertTo-Json -Depth 5 -Compress
+            Write-Host "##vso[task.setvariable variable=ScriptAssignmentsJson;isOutput=true]$jsonText"
 
-    - template: templates/assign-policy.yml
-      parameters:
-        tenantId: $(TenantId)
-        clientId: $(ClientId)
-        clientSecret: $(clientsecret4053)
-        targetGroupId: $(TargetGroupId)
-        scriptAssignments: $[ dependencies.ParseAssignments.outputs['SetAssignments.ScriptAssignmentsJson'] ]
-
-# Notify Slack
-- stage: NotifySlack
-  displayName: Notify Slack
-  dependsOn: DeployToIntune
-  condition: always()
-  jobs:
-  - template: templates/notify-slack.yml
+  - template: templates/assign-policy.yml
+    parameters:
+      tenantId: $(TenantId)
+      clientId: $(ClientId)
+      clientSecret: $(clientsecret4053)
+      targetGroupId: $(TargetGroupId)
+      scriptAssignments: $[ dependencies.ParseAssignments.outputs['SetAssignments.ScriptAssignmentsJson'] ]

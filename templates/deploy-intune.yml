@@ -1,6 +1,3 @@
-# /templates/deploy-intune.yml
-
-
 parameters: {}
 
 jobs:
@@ -28,23 +25,18 @@ jobs:
           $clientId = "$(ClientId)"
           $clientSecret = "$(clientsecret4053)"
 
-          
-          # Ensure Az.Accounts module is installed
           if (-not (Get-Module -ListAvailable -Name Az.Accounts)) {
               Install-Module Az.Accounts -Force -Scope CurrentUser -AllowClobber
           }
 
-          # Import Az.Accounts module if not already imported
           if (-not (Get-Module -Name Az.Accounts)) {
               Import-Module Az.Accounts
           }
 
-          # Ensure Microsoft.Graph module is installed
           if (-not (Get-Module -ListAvailable -Name Microsoft.Graph)) {
               Install-Module Microsoft.Graph -Force -Scope CurrentUser -AllowClobber
           }
 
-          # Import Microsoft.Graph module if not already imported
           if (-not (Get-Module -Name Microsoft.Graph)) {
               Import-Module Microsoft.Graph
           }
@@ -52,16 +44,18 @@ jobs:
           $secureSecret = ConvertTo-SecureString $clientSecret -AsPlainText -Force
           $cred = New-Object System.Management.Automation.PSCredential ($clientId, $secureSecret)
 
-
           Connect-AzAccount -ServicePrincipal -TenantId $tenantId -Credential $cred
           $token = (Get-AzAccessToken -TenantId $tenantId -ResourceUrl "https://graph.microsoft.com").Token
           Connect-MgGraph -AccessToken $token
 
+          $outputDir = "$(Pipeline.Workspace)/ScriptAssignments"
+          New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
+
+          $assignments = @()
 
           foreach ($script in $scriptFiles) {
             $scriptContent = Get-Content -Raw -Path $script.FullName
             $encodedScript = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($scriptContent))
-
 
             $deviceManagementScript = @{
               displayName           = [System.IO.Path]::GetFileNameWithoutExtension($script.FullName)
@@ -72,13 +66,28 @@ jobs:
               runAs32Bit            = $true
             }
 
-
-            Invoke-MgGraphRequest -Method POST `
+            $response = Invoke-MgGraphRequest -Method POST `
               -Uri "https://graph.microsoft.com/beta/deviceManagement/deviceManagementScripts" `
               -Body ($deviceManagementScript | ConvertTo-Json -Depth 5) `
               -ContentType "application/json"
 
+            $scriptId = $response.id
+            if (-not $scriptId) {
+              Write-Error "Failed to get script ID for $($script.Name)"
+              exit 1
+            }
 
-            Write-Host "Deployed $($script.Name)"
+            $assignments += [pscustomobject]@{
+              scriptId = $scriptId
+              displayName = $deviceManagementScript.displayName
+            }
+
+            Write-Host "Deployed $($script.Name) as $scriptId"
           }
 
+          $assignments | ConvertTo-Json -Depth 5 | Out-File -FilePath "$outputDir/script-assignments.json" -Encoding utf8
+          Write-Host "Wrote script assignments JSON to $outputDir/script-assignments.json"
+
+    - publish: $(Pipeline.Workspace)/ScriptAssignments
+      artifact: ScriptAssignments
+      displayName: 'Publish Script Assignments artifact'
