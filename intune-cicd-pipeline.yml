@@ -76,7 +76,7 @@ stages:
       scriptAssignments: $[ dependencies.ParseAssignments.outputs['SetAssignments.ScriptAssignmentsJson'] ]
 
 
-  - stage: NotifyMsTeam-Slack
+- stage: NotifyMsTeam-Slack
   displayName: Notify Slack & Teams
   dependsOn:
    #- AssignPolicies
