@@ -45,7 +45,7 @@ jobs:
           }
           Import-Module Microsoft.Graph
 
-            $secureSecret = ConvertTo-SecureString $clientSecret -AsPlainText -Force
+          $secureSecret = ConvertTo-SecureString $clientSecret -AsPlainText -Force
           $cred = New-Object System.Management.Automation.PSCredential ($clientId, $secureSecret)
 
           Connect-AzAccount -ServicePrincipal -TenantId $tenantId -Credential $cred
@@ -63,7 +63,7 @@ jobs:
               Write-Host "Assigning Script $scriptId to Group $groupId..."
 
               $payload = @{
-                  deviceManagementScriptAssignments = @(
+                  assignments = @(
                       @{
                           target = @{
                               groupId = $groupId
