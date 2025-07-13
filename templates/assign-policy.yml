@@ -45,10 +45,12 @@ jobs:
           }
           Import-Module Microsoft.Graph
 
-          $secureSecret = ConvertTo-SecureString $clientSecret -AsPlainText -Force
-          $credential = New-Object System.Management.Automation.PSCredential($clientId, $secureSecret)
+            $secureSecret = ConvertTo-SecureString $clientSecret -AsPlainText -Force
+          $cred = New-Object System.Management.Automation.PSCredential ($clientId, $secureSecret)
 
-          Connect-MgGraph -TenantId $tenantId -ClientId $clientId -Credential $credential -Scopes "https://graph.microsoft.com/.default"
+          Connect-AzAccount -ServicePrincipal -TenantId $tenantId -Credential $cred
+          $token = (Get-AzAccessToken -TenantId $tenantId -ResourceUrl "https://graph.microsoft.com").Token
+          Connect-MgGraph -AccessToken $token
 
           foreach ($assignment in $assignments) {
               $scriptId = $assignment.scriptId
