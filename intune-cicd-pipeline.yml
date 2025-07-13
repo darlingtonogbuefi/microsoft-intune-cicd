@@ -56,23 +56,21 @@ stages:
         artifact: ScriptAssignments
 
       - task: PowerShell@2
-  name: SetAssignments
-  inputs:
-    targetType: 'inline'
-    pwsh: true
-    script: |
-      $jsonPath = "$(Pipeline.Workspace)/ScriptAssignments/script-assignments.json"
-      $json = Get-Content -Raw -Path $jsonPath | ConvertFrom-Json
-      $jsonText = $json | ConvertTo-Json -Depth 5 -Compress
-      $encoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($jsonText))
-      Write-Host "##vso[task.setvariable variable=ScriptAssignmentsEncoded;isOutput=true]$encoded"
+        name: SetAssignments
+        inputs:
+          targetType: 'inline'
+          pwsh: true
+          script: |
+            $jsonPath = "$(Pipeline.Workspace)/ScriptAssignments/script-assignments.json"
+            $json = Get-Content -Raw -Path $jsonPath | ConvertFrom-Json
+            $jsonText = $json | ConvertTo-Json -Depth 5 -Compress
+            $encoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($jsonText))
+            Write-Host "##vso[task.setvariable variable=ScriptAssignmentsEncoded;isOutput=true]$encoded"
 
-
-- template: templates/assign-policy.yml
-  parameters:
-    tenantId: $(TenantId)
-    clientId: $(ClientId)
-    clientSecret: $(clientsecret4053)
-    targetGroupId: $(TargetGroupId)
-    scriptAssignments: $[ dependencies.ParseAssignments.outputs['SetAssignments.ScriptAssignmentsEncoded'] ]
-
+  - template: templates/assign-policy.yml
+    parameters:
+      tenantId: $(TenantId)
+      clientId: $(ClientId)
+      clientSecret: $(clientsecret4053)
+      targetGroupId: $(TargetGroupId)
+      scriptAssignments: $[ dependencies.ParseAssignments.outputs['SetAssignments.ScriptAssignmentsJson'] ]
