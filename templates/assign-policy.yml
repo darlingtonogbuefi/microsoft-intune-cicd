@@ -15,17 +15,23 @@ jobs:
 
     - task: PowerShell@2
       displayName: 'Assign each script to device group'
+      env:
+        SCRIPT_ASSIGNMENTS: ${{ parameters.scriptAssignments }}
+        TENANT_ID: ${{ parameters.tenantId }}
+        CLIENT_ID: ${{ parameters.clientId }}
+        CLIENT_SECRET: ${{ parameters.clientSecret }}
+        TARGET_GROUP_ID: ${{ parameters.targetGroupId }}
       inputs:
         targetType: 'inline'
         pwsh: true
         script: |
           $ErrorActionPreference = "Stop"
 
-          $tenantId = "${{ parameters.tenantId }}"
-          $clientId = "${{ parameters.clientId }}"
-          $clientSecret = "${{ parameters.clientSecret }}"
-          $passedGroupId = "${{ parameters.targetGroupId }}"
-          $assignmentsJson = '${{ parameters.scriptAssignments }}'
+          $tenantId = $env:TENANT_ID
+          $clientId = $env:CLIENT_ID
+          $clientSecret = $env:CLIENT_SECRET
+          $passedGroupId = $env:TARGET_GROUP_ID
+          $assignmentsJson = $env:SCRIPT_ASSIGNMENTS
           $assignments = $assignmentsJson | ConvertFrom-Json
 
           if (-not (Get-Module -ListAvailable -Name Microsoft.Graph)) {
@@ -33,7 +39,10 @@ jobs:
           }
           Import-Module Microsoft.Graph
 
-          Connect-MgGraph -ClientId $clientId -TenantId $tenantId -ClientSecret $clientSecret -Scopes "DeviceManagementConfiguration.ReadWrite.All"
+          $secureSecret = ConvertTo-SecureString $clientSecret -AsPlainText -Force
+          $credential = New-Object System.Management.Automation.PSCredential($clientId, $secureSecret)
+
+          Connect-MgGraph -TenantId $tenantId -ClientId $clientId -Credential $credential -Scopes "https://graph.microsoft.com/.default"
 
           foreach ($assignment in $assignments) {
               $scriptId = $assignment.scriptId
