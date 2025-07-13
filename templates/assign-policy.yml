@@ -20,7 +20,7 @@ jobs:
         CLIENT_ID: ${{ parameters.clientId }}
         CLIENT_SECRET: ${{ parameters.clientSecret }}
         TARGET_GROUP_ID: ${{ parameters.targetGroupId }}
-        SCRIPT_ASSIGNMENTS_JSON: ${{ parameters.scriptAssignments }}
+        SCRIPT_ASSIGNMENTS_JSON: '${{ parameters.scriptAssignments }}'  # <--- ADD this line
       inputs:
         targetType: 'inline'
         pwsh: true
@@ -32,20 +32,32 @@ jobs:
           $clientSecret = $env:CLIENT_SECRET
           $passedGroupId = $env:TARGET_GROUP_ID
 
-          $encodedJson = $env:SCRIPT_ASSIGNMENTS_JSON
-          if (-not $encodedJson) {
-              Write-Error "SCRIPT_ASSIGNMENTS_JSON is empty or not passed from pipeline."
-              exit 1
+          # 🔽 DECODE base64-encoded JSON string
+          $encodedJson = $env:SCRIPT_ASSIGNMENTS_JSON.Trim('"')
+          try {
+            $decodedJson = [System.Text.Encoding]::UTF8.GetString(
+              [System.Convert]::FromBase64String($encodedJson)
+            )
+          } catch {
+            Write-Error "Failed to decode base64 scriptAssignments: $_"
+            exit 1
           }
 
-          $assignmentsJson = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($encodedJson))
-          $assignments = $assignmentsJson | ConvertFrom-Json
+          # 🔽 Parse the decoded JSON into PowerShell objects
+          try {
+            $assignments = $decodedJson | ConvertFrom-Json
+          } catch {
+            Write-Error "Failed to parse JSON from decoded scriptAssignments: $_"
+            exit 1
+          }
 
+          # 🔽 Ensure Graph module
           if (-not (Get-Module -ListAvailable -Name Microsoft.Graph)) {
               Install-Module Microsoft.Graph -Force -Scope CurrentUser -AllowClobber
           }
           Import-Module Microsoft.Graph
 
+          # 🔽 Auth & connect
           $secureSecret = ConvertTo-SecureString $clientSecret -AsPlainText -Force
           $cred = New-Object System.Management.Automation.PSCredential ($clientId, $secureSecret)
 
@@ -53,6 +65,7 @@ jobs:
           $token = (Get-AzAccessToken -TenantId $tenantId -ResourceUrl "https://graph.microsoft.com").Token
           Connect-MgGraph -AccessToken $token
 
+          # 🔽 Assign scripts
           foreach ($assignment in $assignments) {
               $scriptId = $assignment.scriptId
               $groupId = if ($assignment.PSObject.Properties.Name -contains 'targetGroupId') {
