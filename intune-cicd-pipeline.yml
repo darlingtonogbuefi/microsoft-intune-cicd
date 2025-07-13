@@ -53,16 +53,22 @@ stages:
   jobs:
   - template: templates/deploy-intune.yml
 
-    # ✅ CHANGED: Added this job to publish ScriptAssignments artifact
-  - job: PublishScriptAssignments                 # <-- CHANGED
-    displayName: Publish ScriptAssignments Artifact  # <-- CHANGED
-    dependsOn: []                                 # <-- CHANGED
+   # ✅ CHANGED: Added Copy & Publish Artifact Job
+  - job: PublishScriptAssignments
+    displayName: Publish ScriptAssignments Artifact
+    dependsOn: []
     pool:
       name: Default
     steps:
-      - publish: $(Pipeline.Workspace)/ScriptAssignments   # <-- CHANGED
-        artifact: ScriptAssignments                        # <-- CHANGED
-        displayName: 'Publish ScriptAssignments artifact'  # <-- CHANGED
+      - task: CopyFiles@2                 # ✅ CHANGED
+        displayName: 'Copy to staging'    # ✅ CHANGED
+        inputs:
+          SourceFolder: '$(Build.SourcesDirectory)/intune-scripts'  # ✅ Ensure JSON source here
+          Contents: 'script-assignments.json'
+          TargetFolder: '$(Build.ArtifactStagingDirectory)/ScriptAssignments'
+
+      - publish: '$(Build.ArtifactStagingDirectory)/ScriptAssignments'
+        artifact: ScriptAssignments
 
 # Assign Policies Stage
 - stage: AssignPolicies
@@ -70,6 +76,7 @@ stages:
   dependsOn: DeployToIntune
   condition: succeeded('DeployToIntune')
   jobs:
+
     - job: ParseAssignments
       displayName: Parse Script Assignments JSON
       pool:
@@ -87,9 +94,24 @@ stages:
             script: |
               $jsonPath = "$(Pipeline.Workspace)/ScriptAssignments/script-assignments.json"
               Write-Host "Reading script assignments from $jsonPath"
-              $json = Get-Content -Raw -Path $jsonPath | ConvertFrom-Json
-              $jsonText = $json | ConvertTo-Json -Depth 5 -Compress
-              Write-Host "##vso[task.setvariable variable=ScriptAssignmentsJson;isOutput=true]$jsonText"
+
+              # 🔒 ADDED SAFETY: Check file exists
+              if (-Not (Test-Path $jsonPath)) {
+                  Write-Error "File not found: $jsonPath"
+                  exit 1
+              }
+
+              $jsonRaw = Get-Content -Raw -Path $jsonPath
+              Write-Host "Raw JSON: $jsonRaw"
+
+              try {
+                  $json = $jsonRaw | ConvertFrom-Json
+                  $jsonText = $json | ConvertTo-Json -Depth 5 -Compress
+                  Write-Host "##vso[task.setvariable variable=ScriptAssignmentsJson;isOutput=true]$jsonText"
+              } catch {
+                  Write-Error "Failed to parse JSON: $_"
+                  exit 1
+              }
 
     - template: templates/assign-policy.yml
       parameters:
@@ -97,8 +119,7 @@ stages:
         clientId: $(ClientId)
         clientSecret: $(clientsecret4053)
         targetGroupId: $(TargetGroupId)
-        scriptAssignments: $[ dependencies.ParseAssignments.outputs['SetAssignments.ScriptAssignmentsJson'] ]
-
+        scriptAssignments: $[ dependencies.ParseAssignments.outputs['SetAssignments.ScriptAssignmentsJson'] ]  # ✅ Confirm output reference
 # Notify Slack
 - stage: NotifySlack
   displayName: Notify Slack
