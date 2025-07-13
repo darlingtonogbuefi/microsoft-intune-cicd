@@ -1,4 +1,3 @@
-# templates/assign-policy.yml
 parameters:
   tenantId: ''
   clientId: ''
@@ -33,20 +32,7 @@ jobs:
           $clientSecret = $env:CLIENT_SECRET
           $passedGroupId = $env:TARGET_GROUP_ID
           $assignmentsJson = $env:SCRIPT_ASSIGNMENTS
-
-          # 🔒 ADDED: Validate JSON string presence
-          if ([string]::IsNullOrWhiteSpace($assignmentsJson)) {
-              Write-Error "SCRIPT_ASSIGNMENTS is empty or null"
-              exit 1
-          }
-
-          # 🔒 ADDED: Safe parse
-          try {
-              $assignments = $assignmentsJson | ConvertFrom-Json
-          } catch {
-              Write-Error "Invalid JSON in SCRIPT_ASSIGNMENTS: $_"
-              exit 1
-          }
+          $assignments = $assignmentsJson | ConvertFrom-Json
 
           if (-not (Get-Module -ListAvailable -Name Microsoft.Graph)) {
               Install-Module Microsoft.Graph -Force -Scope CurrentUser -AllowClobber
@@ -61,7 +47,7 @@ jobs:
           foreach ($assignment in $assignments) {
               $scriptId = $assignment.scriptId
 
-              # Use assignment's group if present, otherwise fallback
+              # Use assignment's group if present, otherwise use passed targetGroupId parameter
               $groupId = if ($assignment.PSObject.Properties.Name -contains 'targetGroupId') {
                   $assignment.targetGroupId
               } else {
