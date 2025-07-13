@@ -46,18 +46,20 @@ jobs:
           Connect-MgGraph -AccessToken $token
 
           foreach ($scriptId in $scriptIds) {
+            $uri = "https://graph.microsoft.com/beta/deviceManagement/deviceManagementScripts/$scriptId/assign"
+
             $body = @{
-              deviceManagementScriptGroupAssignments = @(
+              assignments = @(
                 @{
                   '@odata.type' = '#microsoft.graph.deviceManagementScriptGroupAssignment'
-                  id = [guid]::NewGuid().ToString()
-                  targetGroupId = $groupId
+                  target = @{
+                    '@odata.type' = '#microsoft.graph.groupAssignmentTarget'
+                    groupId = $groupId
+                  }
                 }
               )
             } | ConvertTo-Json -Depth 5
 
-            $uri = "https://graph.microsoft.com/beta/deviceManagement/deviceManagementScripts/$scriptId/microsoft.graph.assign"
-
+            Write-Host "Assigning script ID: $scriptId to group: $groupId"
             Invoke-MgGraphRequest -Method POST -Uri $uri -Body $body -ContentType "application/json"
-            Write-Host "Assigned script $scriptId to group $groupId"
           }
