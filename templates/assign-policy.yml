@@ -33,7 +33,7 @@ jobs:
           $passedGroupId = $env:TARGET_GROUP_ID
 
           # 🔽 Parse raw JSON string directly
-          $assignmentsJson = $env:SCRIPT_ASSIGNMENTS_JSON -replace "^[\"']|[\"']$", ''
+          $assignmentsJson = $env:SCRIPT_ASSIGNMENTS_JSON -replace @'^[\"']|[\"']$'@, ''
 
           try {
           $assignments = $assignmentsJson | ConvertFrom-Json
