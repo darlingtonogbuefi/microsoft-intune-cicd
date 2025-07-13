@@ -26,7 +26,7 @@ jobs:
           $clientSecret = '${{ parameters.clientSecret }}'
           $groupId = '${{ parameters.targetGroupId }}'
 
-          $scriptIds = '${{ parameters.scriptIds }}'.Split(',')
+          $scriptIds = "${{ parameters.scriptIds }}" -split ','
 
           if (-not (Get-Module -ListAvailable -Name Az.Accounts)) {
               Install-Module Az.Accounts -Force -Scope CurrentUser -AllowClobber
