@@ -56,7 +56,7 @@ jobs:
               )
             } | ConvertTo-Json -Depth 5
 
-            $uri = "https://graph.microsoft.com/beta/deviceManagement/deviceManagementScripts/$scriptId/assign"
+            $uri = "https://graph.microsoft.com/beta/deviceManagement/deviceManagementScripts/$scriptId/microsoft.graph.assign"
 
             Invoke-MgGraphRequest -Method POST -Uri $uri -Body $body -ContentType "application/json"
             Write-Host "Assigned script $scriptId to group $groupId"
