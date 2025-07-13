@@ -1,0 +1,37 @@
+parameters:
+  webhookUrl: ''
+  pipelineName: ''
+  status: ''
+
+jobs:
+- job: NotifyTeams
+  displayName: Notify Microsoft Teams
+  steps:
+  - task: PowerShell@2
+    displayName: Send Teams Notification
+    inputs:
+      targetType: 'inline'
+      pwsh: true
+      script: |
+        $uri = '${{ parameters.webhookUrl }}'
+        $pipeline = '${{ parameters.pipelineName }}'
+        $status = '${{ parameters.status }}'
+
+        $color = switch ($status.ToLower()) {
+          'succeeded' { '00FF00' }
+          'failed'    { 'FF0000' }
+          'canceled'  { '808080' }
+          default     { 'FFFF00' }
+        }
+
+        $card = @{
+          "@type" = "MessageCard"
+          "@context" = "http://schema.org/extensions"
+          "summary" = "Pipeline $pipeline Notification"
+          "themeColor" = $color
+          "title" = "Pipeline Status: $pipeline"
+          "text" = "The pipeline **$pipeline** finished with status: **$status**"
+        }
+
+        $json = $card | ConvertTo-Json -Depth 5 -Compress
+        Invoke-RestMethod -Method POST -Uri $uri -Body $json -ContentType 'application/json'

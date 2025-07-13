@@ -74,3 +74,24 @@ stages:
       clientSecret: $(clientsecret4053)
       targetGroupId: $(TargetGroupId)
       scriptAssignments: $[ dependencies.ParseAssignments.outputs['SetAssignments.ScriptAssignmentsJson'] ]
+
+
+  - stage: NotifyMsTeam-Slack
+  displayName: Notify Slack & Teams
+  dependsOn:
+   #- AssignPolicies
+    - DeployToIntune
+  condition: always()
+  jobs:
+  - template: templates/notify-slack.yml
+    parameters:
+      webhookUrl: $(SLACK_WEBHOOK_URL)
+      pipelineName: $(Build.DefinitionName)
+      status: $(Agent.JobStatus)
+
+  - template: templates/notify-teams.yml
+    parameters:
+      webhookUrl: $(MSTEAM_WEBHOOK_URL)
+      pipelineName: $(Build.DefinitionName)
+      status: $(Agent.JobStatus)
+
