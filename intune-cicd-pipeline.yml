@@ -71,8 +71,6 @@ stages:
             $scriptIds = $json | ForEach-Object { $_.scriptId }
             $scriptIdsString = $scriptIds -join ','
             Write-Host "##vso[task.setvariable variable=scriptIds;isOutput=true]$scriptIdsString"
-
-
   - template: templates/assign-policy.yml
     parameters:
       tenantId: $(TenantId)
@@ -93,7 +91,6 @@ stages:
       webhookUrl: $(SLACK_WEBHOOK_URL)
       pipelineName: $(Build.DefinitionName)
       status: $(Agent.JobStatus)
-
   - template: templates/notify-teams.yml
     parameters:
       webhookUrl: $(MSTEAM_WEBHOOK_URL)
