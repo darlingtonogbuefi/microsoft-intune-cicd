@@ -74,7 +74,8 @@ stages:
       clientId: $(ClientId)
       clientSecret: $(clientsecret4053)
       targetGroupId: $(intunegroupid)       # from variable group 'targetgroupid'
-      scriptIds: $[ dependencies.ParseAssignments.outputs['SetAssignments.scriptIds'] ]
+      scriptIds: "${{ dependencies.ParseAssignments.outputs['SetAssignments.scriptIds'] }}"
+
 
 
 - stage: NotifyMsTeamsAndSlack
