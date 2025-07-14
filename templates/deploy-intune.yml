@@ -29,17 +29,13 @@ jobs:
               Install-Module Az.Accounts -Force -Scope CurrentUser -AllowClobber
           }
 
-          if (-not (Get-Module -Name Az.Accounts)) {
-              Import-Module Az.Accounts
-          }
+          Import-Module Az.Accounts
 
           if (-not (Get-Module -ListAvailable -Name Microsoft.Graph)) {
               Install-Module Microsoft.Graph -Force -Scope CurrentUser -AllowClobber
           }
 
-          if (-not (Get-Module -Name Microsoft.Graph)) {
-              Import-Module Microsoft.Graph
-          }
+          Import-Module Microsoft.Graph
 
           $secureSecret = ConvertTo-SecureString $clientSecret -AsPlainText -Force
           $cred = New-Object System.Management.Automation.PSCredential ($clientId, $secureSecret)
@@ -67,7 +63,7 @@ jobs:
             }
 
             $response = Invoke-MgGraphRequest -Method POST `
-              -Uri "https://graph.microsoft.com/beta/deviceManagement/deviceManagementScripts" `
+              -Uri "https://graph.microsoft.com/v1.0/deviceManagement/deviceManagementScripts" `
               -Body ($deviceManagementScript | ConvertTo-Json -Depth 5) `
               -ContentType "application/json"
 
