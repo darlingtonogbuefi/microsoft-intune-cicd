@@ -7,6 +7,8 @@ parameters:
     type: string
   - name: targetGroupId
     type: string
+  - name: scriptIds
+    type: string   # ✅ This is the missing parameter
 
 jobs:
 - job: AssignScripts
