@@ -6,7 +6,7 @@ jobs:
     - checkout: self
 
     - task: PowerShell@2
-      name: SetVars  # this name will be used to reference outputs
+      name: SetVars 
       displayName: 'Discover Script and Test Files'
       inputs:
         targetType: inline

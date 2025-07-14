@@ -18,6 +18,7 @@ pool:
   name: Default
 
 stages:
+
 - stage: DiscoverFiles
   displayName: Discover Script & Test Files
   jobs:
@@ -30,12 +31,14 @@ stages:
   jobs:
   - template: templates/test-pester.yml
 
+
 - stage: PSScriptAnalyzer
   dependsOn: DiscoverFiles
   variables:
     SCRIPT_PATHS: $[ stageDependencies.DiscoverFiles.DiscoverFiles.outputs['SetVars.SCRIPT_PATHS'] ]
   jobs:
   - template: templates/lint-psscriptanalyzer.yml
+
 
 - stage: DeployToIntune
   dependsOn: 
@@ -44,6 +47,7 @@ stages:
   condition: and(succeeded('PesterTests'), succeeded('PSScriptAnalyzer'))
   jobs:
   - template: templates/deploy-intune.yml
+
 
 - stage: AssignPolicies
   dependsOn: DeployToIntune
@@ -68,20 +72,19 @@ stages:
             $scriptIdsString = $scriptIds -join ','
             Write-Host "##vso[task.setvariable variable=scriptIds;isOutput=true]$scriptIdsString"
 
+
   - template: templates/assign-policy.yml
     parameters:
       tenantId: $(TenantId)
       clientId: $(ClientId)
       clientSecret: $(clientsecret4053)
-      targetGroupId: $(intunegroupid)       # from variable group 'targetgroupid'
+      targetGroupId: $(intunegroupid) 
       scriptIds: $[ stageDependencies.AssignPolicies.ParseAssignments.outputs['SetAssignments.scriptIds'] ]
-
 
 
 - stage: NotifyMsTeamsAndSlack
   displayName: Notify Slack & Teams
   dependsOn:
-   #- AssignPolicies
     - DeployToIntune
   condition: always()
   jobs:

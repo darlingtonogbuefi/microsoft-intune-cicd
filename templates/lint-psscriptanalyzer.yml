@@ -52,10 +52,10 @@ jobs:
           Write-Host "##vso[task.setvariable variable=ANALYZER_FAILED]$fail"
 
           if ($fail) {
-            Write-Error "❌ PSScriptAnalyzer found ERROR issues. See report."
+            Write-Error "PSScriptAnalyzer found ERROR issues. See report."
             exit 1
           } else {
-            Write-Host "✅ No ERROR issues found by PSScriptAnalyzer."
+            Write-Host "No ERROR issues found by PSScriptAnalyzer."
           }
 
     - task: PublishPipelineArtifact@1
