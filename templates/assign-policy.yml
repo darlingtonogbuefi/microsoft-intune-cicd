@@ -7,8 +7,8 @@ parameters:
     type: string
   - name: targetGroupId
     type: string
-  - name: scriptIds
-    type: string  # comma-separated string of script IDs
+  - name: scriptIds          # ✅ Expecting already-resolved, comma-separated string
+    type: string
 
 jobs:
 - job: AssignScripts
@@ -21,19 +21,22 @@ jobs:
         targetType: 'inline'
         pwsh: true
         script: |
-          # Initialize parameters
+          # ===========================================
+          # ✅ Init and Debug
+          # ===========================================
           $tenantId = '${{ parameters.tenantId }}'
           $clientId = '${{ parameters.clientId }}'
           $clientSecret = '${{ parameters.clientSecret }}'
           $groupId = '${{ parameters.targetGroupId }}'
-          $scriptIdsRaw = '${{ parameters.scriptIds }}'
+          $scriptIdsRaw = '${{ parameters.scriptIds }}'   # 🟨 DO NOT use $[ ... ] here
           $scriptIds = $scriptIdsRaw -split ','
 
-          # ✅ Final Debug Tip
           Write-Host "DEBUG: scriptIds = $scriptIdsRaw"
           Write-Host "DEBUG: targetGroupId = $groupId"
 
-          # Validation
+          # ===========================================
+          # ✅ Input Validation
+          # ===========================================
           if ([string]::IsNullOrWhiteSpace($tenantId) -or
               [string]::IsNullOrWhiteSpace($clientId) -or
               [string]::IsNullOrWhiteSpace($clientSecret) -or
@@ -43,7 +46,9 @@ jobs:
               exit 1
           }
 
-          # Install & import modules
+          # ===========================================
+          # ✅ Install Modules if Needed
+          # ===========================================
           if (-not (Get-Module -ListAvailable -Name Az.Accounts)) {
               Install-Module Az.Accounts -Force -Scope CurrentUser -AllowClobber
           }
@@ -54,7 +59,9 @@ jobs:
           }
           Import-Module Microsoft.Graph
 
-          # Auth
+          # ===========================================
+          # ✅ Authenticate and Acquire Token
+          # ===========================================
           $secureSecret = ConvertTo-SecureString $clientSecret -AsPlainText -Force
           $cred = New-Object System.Management.Automation.PSCredential ($clientId, $secureSecret)
 
@@ -62,7 +69,9 @@ jobs:
           $token = (Get-AzAccessToken -TenantId $tenantId -ResourceUrl "https://graph.microsoft.com").Token
           Connect-MgGraph -AccessToken $token
 
-          # Assign scripts to group
+          # ===========================================
+          # ✅ Assign Each Script
+          # ===========================================
           foreach ($scriptId in $scriptIds) {
               $scriptIdTrimmed = $scriptId.Trim()
               if ([string]::IsNullOrWhiteSpace($scriptIdTrimmed)) { continue }
