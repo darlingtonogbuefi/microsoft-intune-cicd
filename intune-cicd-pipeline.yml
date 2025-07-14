@@ -74,7 +74,7 @@ stages:
       clientId: $(ClientId)
       clientSecret: $(clientsecret4053)
       targetGroupId: $(intunegroupid)       # from variable group 'targetgroupid'
-      scriptIds: "${{ dependencies.ParseAssignments.outputs['SetAssignments.scriptIds'] }}"
+      scriptIds: $[ stageDependencies.AssignPolicies.ParseAssignments.outputs['SetAssignments.scriptIds'] ]
 
 
 
