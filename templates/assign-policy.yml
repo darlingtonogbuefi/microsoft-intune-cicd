@@ -64,7 +64,7 @@ jobs:
                   continue
               }
 
-              $uri = "https://graph.microsoft.com/v1.0/deviceManagement/deviceManagementScripts/$scriptId/assign"
+              $uri = "https://graph.microsoft.com/beta/deviceManagement/deviceManagementScripts/$scriptId/assign"
 
               $body = @{
                 deviceManagementScriptGroupAssignments = @(
