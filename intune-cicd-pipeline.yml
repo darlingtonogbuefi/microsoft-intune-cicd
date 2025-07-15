@@ -81,7 +81,6 @@ stages:
 - stage: NotifyMsTeamsAndSlack
   displayName: Notify Slack & Teams
   dependsOn:
-   #- AssignPolicies
     - DeployToIntune
   condition: always()
   jobs:

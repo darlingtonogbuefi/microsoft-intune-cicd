@@ -111,7 +111,7 @@ resource "azurerm_windows_virtual_machine" "agent" {
 }
 
 resource "azurerm_key_vault" "kv" {
-  name                        = "IntuneCICDKeyVault534"
+  name                        = "intunecicdkeyvault"
   location                    = azurerm_resource_group.rg.location
   resource_group_name         = azurerm_resource_group.rg.name
   tenant_id                   = var.tenant_id
@@ -119,13 +119,4 @@ resource "azurerm_key_vault" "kv" {
   purge_protection_enabled    = false
   public_network_access_enabled = true
 
-  access_policy {
-    tenant_id = var.tenant_id
-    object_id = var.azure_devops_sp_object_id
-
-    secret_permissions = [
-      "Get",
-      "List"
-    ]
-  }
 }
