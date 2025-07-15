@@ -45,6 +45,18 @@ resource "azurerm_network_security_group" "nsg" {
     source_address_prefix      = "*"
     destination_address_prefix = "*"
   }
+
+  security_rule {
+    name                       = "WinRM"
+    priority                   = 110
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "5985"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
 }
 
 resource "azurerm_network_interface" "nic" {
@@ -87,36 +99,39 @@ resource "azurerm_windows_virtual_machine" "agent" {
     sku       = "2022-datacenter"
     version   = "latest"
   }
+}
 
-  custom_data = base64encode(<<-EOF
-    <powershell>
-    # Install basic tools
-    Write-Host "Installing Azure CLI..."
-    Invoke-WebRequest -Uri https://aka.ms/installazurecliwindows -OutFile azurecli.msi
-    Start-Process msiexec.exe -ArgumentList '/i', 'azurecli.msi', '/quiet', '/norestart' -NoNewWindow -Wait
-    Remove-Item -Force azurecli.msi
+resource "azurerm_virtual_machine_extension" "custom_script" {
+  name                 = "setup-environment"
+  virtual_machine_id   = azurerm_windows_virtual_machine.agent.id
+  publisher            = "Microsoft.Compute"
+  type                 = "CustomScriptExtension"
+  type_handler_version = "1.10"
 
-    Write-Host "Installing Python..."
-    Invoke-WebRequest -Uri https://www.python.org/ftp/python/3.9.7/python-3.9.7-amd64.exe -OutFile python-installer.exe
-    Start-Process python-installer.exe -ArgumentList '/quiet', 'InstallAllUsers=1', 'PrependPath=1' -NoNewWindow -Wait
-    Remove-Item -Force python-installer.exe
+  settings = <<SETTINGS
+    {
+      "fileUris": [
+        "https://raw.githubusercontent.com/darlingtonogbuefi/microsoft-intune-cicd/main/setup-agentVM-environment.ps1"
+      ],
+      "commandToExecute": "powershell -ExecutionPolicy Bypass -File setup-agentVM-environment.ps1"
+    }
+  SETTINGS
 
-    Write-Host "Installing Pester..."
-    Install-Module -Name Pester -Force -SkipPublisherCheck -Scope CurrentUser
+  protected_settings = <<PROTECTED_SETTINGS
+    {}
+  PROTECTED_SETTINGS
 
-    Write-Host "Windows Server 2022 VM setup complete"
-    </powershell>
-  EOF
-  )
+  depends_on = [
+    azurerm_windows_virtual_machine.agent
+  ]
 }
 
 resource "azurerm_key_vault" "kv" {
-  name                        = "intunecicdkeyvault"
-  location                    = azurerm_resource_group.rg.location
-  resource_group_name         = azurerm_resource_group.rg.name
-  tenant_id                   = var.tenant_id
-  sku_name                    = "standard"
-  purge_protection_enabled    = false
+  name                          = "intunecicdkeyvault"
+  location                      = azurerm_resource_group.rg.location
+  resource_group_name           = azurerm_resource_group.rg.name
+  tenant_id                     = var.tenant_id
+  sku_name                      = "standard"
+  purge_protection_enabled      = false
   public_network_access_enabled = true
-
 }
