@@ -32,7 +32,7 @@ jobs:
         run: |
           echo "Creating Storage Account for Terraform state..."
           az storage account create \
-            --name tfstatestorage4053 \
+            --name tfstatestorage \
             --resource-group tfstate-rg \
             --location eastus \
             --sku Standard_LRS \
@@ -43,14 +43,14 @@ jobs:
         id: get_key
         run: |
           echo "Fetching storage account key..."
-          echo "key=$(az storage account keys list --resource-group tfstate-rg --account-name tfstatestorage4053 --query '[0].value' -o tsv)" >> $GITHUB_OUTPUT
+          echo "key=$(az storage account keys list --resource-group tfstate-rg --account-name tfstatestorage --query '[0].value' -o tsv)" >> $GITHUB_OUTPUT
 
       - name: Create Blob Container for TF State
         run: |
           echo "🪣 Creating blob container for Terraform state..."
           az storage container create \
             --name tfstate \
-            --account-name tfstatestorage4053 \
+            --account-name tfstatestorage \
             --account-key ${{ steps.get_key.outputs.key }} \
             || echo "Container already exists"
 
