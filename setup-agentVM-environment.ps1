@@ -64,7 +64,12 @@ foreach ($module in $installedGraphModules) {
 if (-not ($installedGraphModules | Where-Object { $_.Version -eq $latestGraphVersion })) {
     Install-Module -Name Microsoft.Graph -RequiredVersion $latestGraphVersion -Force -Scope AllUsers
 }
-Import-Module Microsoft.Graph -Force
+
+# Only import if not already loaded
+if (-not (Get-Module Microsoft.Graph.DeviceManagement.Administration)) {
+    Import-Module Microsoft.Graph.DeviceManagement.Administration
+}
+
 
 ### ------------------------
 ### Azure CLI
