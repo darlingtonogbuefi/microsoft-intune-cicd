@@ -27,7 +27,7 @@ jobs:
           echo "Fetching storage account key for backend..."
           key=$(az storage account keys list \
             --resource-group tfstate-rg \
-            --account-name tfstatestorage4053 \
+            --account-name tfstatestorage946 \
             --query "[0].value" -o tsv)
           echo "key=$key" >> $GITHUB_OUTPUT
 
@@ -53,11 +53,8 @@ jobs:
           TF_VAR_client_id:        ${{ fromJson(secrets.AZURE_CREDENTIALS).clientId }}
           TF_VAR_client_secret:    ${{ fromJson(secrets.AZURE_CREDENTIALS).clientSecret }}
           TF_VAR_tenant_id:        ${{ fromJson(secrets.AZURE_CREDENTIALS).tenantId }}
-          TF_VAR_azure_devops_url: ${{ secrets.AZDO_ORG_URL }}
-          TF_VAR_pat_token:        ${{ secrets.AZDO_PAT }}
           TF_VAR_admin_username:   ${{ secrets.VM_ADMIN_USERNAME }}
           TF_VAR_admin_password:   ${{ secrets.VM_ADMIN_PASSWORD }}
-          TF_VAR_azure_devops_sp_object_id: ${{ secrets.AZURE_DEVOPS_SP_OBJECT_ID }}
         run: |
           echo "🔨 Running Terraform destroy..."
           terraform destroy -auto-approve -input=false 2>&1 | tee terraform-destroy.log
