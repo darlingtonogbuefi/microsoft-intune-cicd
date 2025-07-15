@@ -8,7 +8,7 @@ parameters:
   - name: targetGroupId
     type: string
   - name: scriptIds
-    type: string
+    type: string   # ✅ This is the missing parameter
 
 jobs:
 - job: AssignScripts
@@ -75,6 +75,6 @@ jobs:
                 )
               } | ConvertTo-Json -Depth 5
 
-              Write-Host "Assigning script $($entry.displayName) [$scriptId] to group $groupId"
+              Write-Host "📦 Assigning script $($entry.displayName) [$scriptId] to group $groupId"
               Invoke-MgGraphRequest -Method POST -Uri $uri -Body $body -ContentType "application/json"
           }
