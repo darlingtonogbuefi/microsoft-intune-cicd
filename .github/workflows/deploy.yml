@@ -78,7 +78,7 @@ jobs:
           TF_VAR_tenant_id: ${{ fromJson(secrets.AZURE_CREDENTIALS).tenantId }}
           TF_VAR_admin_username: ${{ secrets.VM_ADMIN_USERNAME }}
           TF_VAR_admin_password: ${{ secrets.VM_ADMIN_PASSWORD }}
-          #TF_VAR_azure_devops_sp_object_id: ${{ secrets.AZURE_DEVOPS_SP_OBJECT_ID }}
+          
 
         run: |
           set -o pipefail   # <- THIS ensures pipeline fails if any command fails
