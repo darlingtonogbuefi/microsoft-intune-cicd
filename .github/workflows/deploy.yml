@@ -25,12 +25,12 @@ jobs:
 
       - name: Create Resource Group for TF State
         run: |
-          echo "🔧 Creating Resource Group for Terraform state..."
+          echo "Creating Resource Group for Terraform state..."
           az group create --name tfstate-rg --location eastus || echo "Resource group already exists"
 
       - name: Create Storage Account for TF State
         run: |
-          echo "📦 Creating Storage Account for Terraform state..."
+          echo "Creating Storage Account for Terraform state..."
           az storage account create \
             --name tfstatestorage4053 \
             --resource-group tfstate-rg \
@@ -42,7 +42,7 @@ jobs:
       - name: Get Storage Account Key
         id: get_key
         run: |
-          echo "🔑 Fetching storage account key..."
+          echo "Fetching storage account key..."
           echo "key=$(az storage account keys list --resource-group tfstate-rg --account-name tfstatestorage4053 --query '[0].value' -o tsv)" >> $GITHUB_OUTPUT
 
       - name: Create Blob Container for TF State
@@ -58,7 +58,7 @@ jobs:
         env:
           ARM_ACCESS_KEY: ${{ steps.get_key.outputs.key }}
         run: |
-          echo "🚀 Initializing Terraform..."
+          echo "Initializing Terraform..."
           terraform init -input=false
 
       - name: Terraform Apply
@@ -95,7 +95,7 @@ jobs:
           ARM_CLIENT_SECRET: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientSecret }}
           ARM_TENANT_ID: ${{ fromJson(secrets.AZURE_CREDENTIALS).tenantId }}
         run: |
-          echo "🌐 Fetching VM public IP..."
+          echo "Fetching VM public IP..."
           IP=$(terraform output -raw agent_public_ip -no-color | tr -d '\r\n')
           echo "vm_ip=$IP" >> "$GITHUB_OUTPUT"
-          echo "::notice::✅ VM Public IP: $IP"
+          echo "::notice:: VM Public IP: $IP"

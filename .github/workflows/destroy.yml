@@ -24,7 +24,7 @@ jobs:
       - name: Get Storage Account Key for Backend
         id: get_key
         run: |
-          echo "🔑 Fetching storage account key for backend..."
+          echo "Fetching storage account key for backend..."
           key=$(az storage account keys list \
             --resource-group tfstate-rg \
             --account-name tfstatestorage4053 \
@@ -35,7 +35,7 @@ jobs:
         env:
           ARM_ACCESS_KEY: ${{ steps.get_key.outputs.key }}
         run: |
-          echo "🚀 Initializing Terraform..."
+          echo "Initializing Terraform..."
           terraform init -input=false
 
       - name: Terraform Destroy
@@ -61,14 +61,14 @@ jobs:
         run: |
           echo "🔨 Running Terraform destroy..."
           terraform destroy -auto-approve -input=false 2>&1 | tee terraform-destroy.log
-          echo "✅ Terraform destroy completed"
+          echo "Terraform destroy completed"
 
       - name: Delete TF State Resource Group
         run: |
-          echo "🗑️ Deleting Terraform state resource group (tfstate-rg)..."
+          echo "Deleting Terraform state resource group (tfstate-rg)..."
           az group delete --name tfstate-rg --yes --no-wait || echo "tfstate-rg not found"
 
       - name: Delete NetworkWatcherRG (optional)
         run: |
-          echo "🗑️ Deleting NetworkWatcherRG (optional)..."
+          echo "Deleting NetworkWatcherRG (optional)..."
           az group delete --name NetworkWatcherRG --yes --no-wait || echo "NetworkWatcherRG not found or auto-managed"
