@@ -82,7 +82,7 @@ jobs:
 
         run: |
           set -o pipefail   # <- THIS ensures pipeline fails if any command fails
-          terraform apply -auto-approve -input=false -var-file=terraform.tfvars 2>&1 | tee terraform-output.log
+          terraform apply -auto-approve -input=false -var-file=terraform/terraform.tfvars 2>&1 | tee terraform-output.log
           echo "Terraform deploy completed"
       - name: Get VM Public IP
         id: get_ip
