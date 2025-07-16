@@ -101,7 +101,7 @@ resource "azurerm_windows_virtual_machine" "agent" {
   }
 }
 
-resource "azurerm_virtual_machine_extension" "custom_script" {
+resource "azurerm_virtual_machine_extension" "psscript" {
   name                 = "setup-environment"
   virtual_machine_id   = azurerm_windows_virtual_machine.agent.id
   publisher            = "Microsoft.Compute"
@@ -113,7 +113,7 @@ resource "azurerm_virtual_machine_extension" "custom_script" {
       "fileUris": [
         "https://raw.githubusercontent.com/darlingtonogbuefi/microsoft-intune-cicd/main/setup-agentVM-environment.ps1"
       ],
-      "commandToExecute": "powershell -ExecutionPolicy Bypass -File setup-agentVM-environment.ps1"
+      "commandToExecute": "powershell -ExecutionPolicy Unrestricted -File setup-agentVM-environment.ps1"
     }
   SETTINGS
 
