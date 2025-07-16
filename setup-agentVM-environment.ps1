@@ -57,9 +57,9 @@ if (-not ($installedGraphModules | Where-Object { $_.Version -eq $latestGraphVer
 }
 
 # Only import if not already loaded
-if (-not (Get-Module Microsoft.Graph.DeviceManagement.Administration)) {
-    Import-Module Microsoft.Graph.DeviceManagement.Administration
-}
+#if (-not (Get-Module Microsoft.Graph.DeviceManagement.Administration)) {
+#    Import-Module Microsoft.Graph.DeviceManagement.Administration
+#}
 
 
 
@@ -79,7 +79,6 @@ if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
     Start-Process -FilePath $pythonInstaller -ArgumentList "/quiet", "InstallAllUsers=1", "PrependPath=1" -Wait
     Remove-Item $pythonInstaller -Force
 }
-
 
 # PowerShell CLI 7.5.2
 
@@ -106,4 +105,3 @@ $shortcut.WindowStyle = 1
 $shortcut.IconLocation = "$pwshPath,0"
 $shortcut.Save()
 
-Write-Host "Environment setup complete."
