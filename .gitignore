@@ -23,6 +23,5 @@ terraform.rc
 .idea/
 .vscode/
 
-# Lock file (optional)
-#.terraform.lock.hcl
+
 
