@@ -26,5 +26,3 @@ terraform.rc
 # Lock file (optional)
 #.terraform.lock.hcl
 
-# Ignore terraform.tfvars
-terraform.tfvars
