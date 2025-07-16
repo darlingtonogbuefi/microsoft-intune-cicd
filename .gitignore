@@ -24,4 +24,7 @@ terraform.rc
 .vscode/
 
 
+# exempt pipeline
+intune-cicd-pipeline.yml
+
 
