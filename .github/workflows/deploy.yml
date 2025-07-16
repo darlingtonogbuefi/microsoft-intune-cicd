@@ -99,7 +99,7 @@ jobs:
           RAW_IP=$(terraform output -raw agent_public_ip)
           echo "Raw IP output: $RAW_IP"
 
-          CLEANED_IP=$(echo "$RAW_IP" | grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}')
+          CLEANED_IP=$(echo "$RAW_IP" | grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}' | tr -d '\r\n')
           echo "Cleaned IP: $CLEANED_IP"
 
           echo "vm_ip<<EOF" >> $GITHUB_OUTPUT
@@ -131,11 +131,12 @@ jobs:
           echo "--- hosts.ini content ---"
           cat hosts.ini
 
-      - name: Install Ansible dependencies
+      - name: Install Ansible and dependencies
         run: |
           python3 -m pip install --upgrade pip
-          pip install "pywinrm>=0.4.2"
+          python3 -m pip install ansible pywinrm
 
       - name: Install tools via Ansible
         run: |
-          ansible-playbook install-tools.yml -i hosts.ini
+          python3 -m ansible.playbook install-tools.yml -i hosts.ini
+
