@@ -101,13 +101,16 @@ jobs:
           echo "::notice:: VM Public IP: $IP"
 
       
+      - name: Create Ansible inventory file
+        run: |
+          echo "[windows]" > hosts.ini
+          echo "${{ steps.get_ip.outputs.vm_ip }} ansible_port=5985" >> hosts.ini
+
       - name: Install tools via Ansible
         uses: dawidd6/action-ansible-playbook@v2
         with:
           playbook: install-tools.yml
-          inventory: |
-            [windows]
-            ${{ steps.get_ip.outputs.vm_ip }} ansible_port=5985
+          inventory: hosts.ini
           options: |
             -e ansible_user=${{ secrets.VM_ADMIN_USERNAME }}
             -e ansible_password=${{ secrets.VM_ADMIN_PASSWORD }}
