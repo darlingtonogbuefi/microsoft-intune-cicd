@@ -48,7 +48,7 @@ resource "azurerm_network_security_group" "nsg" {
 
   security_rule {
     name                       = "WinRM-http"
-    priority                   = 111
+    priority                   = 110
     direction                  = "Inbound"
     access                     = "Allow"
     protocol                   = "Tcp"
@@ -63,7 +63,7 @@ resource "azurerm_network_security_group" "nsg" {
     priority                   = 111
     direction                  = "Inbound"
     access                     = "Allow"
-    protocol                   = "TCP"
+    protocol                   = "Tcp"
     source_port_range          = "*"
     destination_port_range     = "5986"
     source_address_prefix      = "*"
