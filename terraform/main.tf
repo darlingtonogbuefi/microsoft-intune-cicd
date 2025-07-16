@@ -140,5 +140,5 @@ resource "azurerm_virtual_machine_extension" "psscript" {
     }
 SETTINGS
 
-  depends_on = [azurerm_windows_virtual_machine.server_vm]
+  depends_on = [azurerm_windows_virtual_machine.agent]
 }
