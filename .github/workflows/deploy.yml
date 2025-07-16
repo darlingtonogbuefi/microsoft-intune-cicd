@@ -104,17 +104,10 @@ jobs:
       - name: Create Ansible inventory file
         run: |
           echo "[windows]" > hosts.ini
-          echo "${{ steps.get_ip.outputs.vm_ip }} ansible_port=5985" >> hosts.ini
+          echo "${{ steps.get_ip.outputs.vm_ip }} ansible_port=5985 ansible_user=${{ secrets.VM_ADMIN_USERNAME }} ansible_password=${{ secrets.VM_ADMIN_PASSWORD }} ansible_connection=winrm ansible_winrm_transport=basic ansible_winrm_server_cert_validation=ignore" >> hosts.ini
+          cat hosts.ini
 
       - name: Install tools via Ansible
-        uses: dawidd6/action-ansible-playbook@v2
-        with:
-          playbook: install-tools.yml
-          inventory: hosts.ini
-          options: |
-            -e ansible_user=${{ secrets.VM_ADMIN_USERNAME }}
-            -e ansible_password=${{ secrets.VM_ADMIN_PASSWORD }}
-            -e ansible_connection=winrm
-            -e ansible_winrm_transport=basic
-            -e ansible_winrm_server_cert_validation=ignore
+        run: |
+          ansible-playbook install-tools.yml -i hosts.ini
 
