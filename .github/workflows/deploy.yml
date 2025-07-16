@@ -96,7 +96,7 @@ jobs:
           ARM_TENANT_ID: ${{ fromJson(secrets.AZURE_CREDENTIALS).tenantId }}
         run: |
           echo "Fetching VM public IP..."
-          IP=$(terraform output -raw agent_public_ip -no-color | tr -d '\r\n')
+          IP=$(terraform -chdir=terraform output -raw agent_public_ip -no-color | tr -d '\r\n')
           echo "vm_ip=$IP" >> "$GITHUB_OUTPUT"
           echo "::notice:: VM Public IP: $IP"
 
