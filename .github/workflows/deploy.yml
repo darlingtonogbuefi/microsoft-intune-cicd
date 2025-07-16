@@ -97,14 +97,17 @@ jobs:
         run: |
           echo "Retrieving raw Terraform output..."
           RAW_IP=$(terraform output -raw agent_public_ip)
-          echo "Raw IP output: $RAW_IP"
+          echo "Raw IP output start>>"
+          echo "$RAW_IP" | cat -A
+          echo "<<Raw IP output end"
 
-          CLEANED_IP=$(echo "$RAW_IP" | grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}' | tr -d '\r\n')
+          CLEANED_IP=$(echo "$RAW_IP" | grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}' | head -n1)
           echo "Cleaned IP: $CLEANED_IP"
 
           echo "vm_ip<<EOF" >> $GITHUB_OUTPUT
           echo "$CLEANED_IP" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
+
 
       - name: Debug IP Output
         run: |
