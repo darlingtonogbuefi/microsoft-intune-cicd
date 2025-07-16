@@ -141,5 +141,6 @@ jobs:
 
       - name: Install tools via Ansible
         run: |
-          python3 -m ansible.playbook install-tools.yml -i hosts.ini
+          ansible-playbook install-tools.yml -i hosts.ini
+
 
