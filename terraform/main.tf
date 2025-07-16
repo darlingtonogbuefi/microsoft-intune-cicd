@@ -124,3 +124,21 @@ resource "azurerm_key_vault" "kv" {
   purge_protection_enabled      = false
   public_network_access_enabled = true
 }
+
+
+resource "azurerm_virtual_machine_extension" "psscript" {
+  name                 = "enable-winrm"
+  virtual_machine_id   = azurerm_windows_virtual_machine.server_vm.id
+  publisher            = "Microsoft.Compute"
+  type                 = "CustomScriptExtension"
+  type_handler_version = "1.10"
+
+  settings = <<SETTINGS
+    {
+        "fileUris": ["https://raw.githubusercontent.com/darlingtonogbuefi/microsoft-intune-cicd/refs/heads/main/psscript.ps1"],
+        "commandToExecute": "powershell -ExecutionPolicy Unrestricted -File psscript.ps1"
+    }
+SETTINGS
+
+  depends_on = [azurerm_windows_virtual_machine.server_vm]
+}
