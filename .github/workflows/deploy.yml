@@ -95,9 +95,9 @@ jobs:
           ARM_CLIENT_SECRET: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientSecret }}
           ARM_TENANT_ID: ${{ fromJson(secrets.AZURE_CREDENTIALS).tenantId }}
         run: |
-          VM_IP=$(terraform -chdir=terraform output -raw agent_public_ip | tr -d '\r\n')
+          VM_IP=$(terraform -chdir=terraform output -raw agent_public_ip 2>/dev/null | head -n1 | tr -d '\r\n')
+          echo "VM_IP=$VM_IP"
           echo "vm_ip=$VM_IP" >> "$GITHUB_OUTPUT"
-
 
       - name: Debug IP Output
         run: |
