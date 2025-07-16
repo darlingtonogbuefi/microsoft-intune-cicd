@@ -117,10 +117,6 @@ resource "azurerm_virtual_machine_extension" "psscript" {
     }
   SETTINGS
 
-  protected_settings = <<PROTECTED_SETTINGS
-    {}
-  PROTECTED_SETTINGS
-
   depends_on = [
     azurerm_windows_virtual_machine.agent
   ]
