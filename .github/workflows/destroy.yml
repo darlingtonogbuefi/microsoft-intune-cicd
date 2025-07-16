@@ -56,8 +56,9 @@ jobs:
           TF_VAR_admin_username:   ${{ secrets.VM_ADMIN_USERNAME }}
           TF_VAR_admin_password:   ${{ secrets.VM_ADMIN_PASSWORD }}
         run: |
-          echo "🔨 Running Terraform destroy..."
-          terraform destroy -auto-approve -input=false -var-file=terraform.tfvars 2>&1 | tee terraform-output.log
+          echo "Running Terraform destroy..."
+          terraform -chdir=terraform init -input=false -backend=true
+          terraform -chdir=terraform destroy -auto-approve -input=false -var-file=terraform.tfvars 2>&1 | tee terraform-output.log
           echo "Terraform destroy completed"
 
       - name: Delete TF State Resource Group
