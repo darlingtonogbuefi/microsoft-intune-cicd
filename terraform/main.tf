@@ -128,7 +128,7 @@ resource "azurerm_key_vault" "kv" {
 
 resource "azurerm_virtual_machine_extension" "psscript" {
   name                 = "enable-winrm"
-  virtual_machine_id   = azurerm_windows_virtual_machine.server_vm.id
+  virtual_machine_id   = azurerm_windows_virtual_machine.agent.id
   publisher            = "Microsoft.Compute"
   type                 = "CustomScriptExtension"
   type_handler_version = "1.10"
