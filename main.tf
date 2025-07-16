@@ -3,26 +3,26 @@ provider "azurerm" {
 }
 
 resource "azurerm_resource_group" "rg" {
-  name     = "devops-agent-rg"
-  location = "East US"
+  name     = var.resource_group_name
+  location = var.location
 }
 
 resource "azurerm_virtual_network" "vnet" {
-  name                = "agent-vnet"
-  address_space       = ["10.0.0.0/16"]
+  name                = var.virtual_network_name
+  address_space       = var.vnet_address_space
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
 }
 
 resource "azurerm_subnet" "subnet" {
-  name                 = "agent-subnet"
+  name                 = var.subnet_name
   resource_group_name  = azurerm_resource_group.rg.name
   virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = ["10.0.1.0/24"]
+  address_prefixes     = var.snet_address_space
 }
 
 resource "azurerm_public_ip" "public_ip" {
-  name                = "agent-public-ip"
+  name                = "${var.agent_name}-public-ip"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
   allocation_method   = "Static"
@@ -30,7 +30,7 @@ resource "azurerm_public_ip" "public_ip" {
 }
 
 resource "azurerm_network_security_group" "nsg" {
-  name                = "agent-nsg"
+  name                = "${var.agent_name}-nsg"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
 
@@ -60,7 +60,7 @@ resource "azurerm_network_security_group" "nsg" {
 }
 
 resource "azurerm_network_interface" "nic" {
-  name                = "agent-nic"
+  name                = "${var.agent_name}-nic"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
 
@@ -82,7 +82,7 @@ resource "azurerm_windows_virtual_machine" "agent" {
   location              = azurerm_resource_group.rg.location
   resource_group_name   = azurerm_resource_group.rg.name
   network_interface_ids = [azurerm_network_interface.nic.id]
-  size                  = "Standard_B2s"
+  size                  = var.disk_size
   admin_username        = var.admin_username
   admin_password        = var.admin_password
   license_type          = "Windows_Server"
@@ -90,7 +90,7 @@ resource "azurerm_windows_virtual_machine" "agent" {
   os_disk {
     caching              = "ReadWrite"
     storage_account_type = "Standard_LRS"
-    name                 = "agentosdisk"
+    name                 = "${var.agent_name}-osdisk"
   }
 
   source_image_reference {
@@ -101,29 +101,8 @@ resource "azurerm_windows_virtual_machine" "agent" {
   }
 }
 
-resource "azurerm_virtual_machine_extension" "psscript" {
-  name                 = "setup-environment"
-  virtual_machine_id   = azurerm_windows_virtual_machine.agent.id
-  publisher            = "Microsoft.Compute"
-  type                 = "CustomScriptExtension"
-  type_handler_version = "1.10"
-
-  settings = <<SETTINGS
-    {
-      "fileUris": [
-        "https://raw.githubusercontent.com/darlingtonogbuefi/microsoft-intune-cicd/main/setup-agentVM-environment.ps1"
-      ],
-      "commandToExecute": "powershell -ExecutionPolicy Unrestricted -File setup-agentVM-environment.ps1"
-    }
-  SETTINGS
-
-  depends_on = [
-    azurerm_windows_virtual_machine.agent
-  ]
-}
-
 resource "azurerm_key_vault" "kv" {
-  name                          = "intunecicdkeyvault"
+  name                          = var.key_vault_name
   location                      = azurerm_resource_group.rg.location
   resource_group_name           = azurerm_resource_group.rg.name
   tenant_id                     = var.tenant_id
