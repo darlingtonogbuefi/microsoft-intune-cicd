@@ -85,6 +85,7 @@ jobs:
           terraform -chdir=terraform init -input=false -backend=true
           terraform -chdir=terraform destroy -auto-approve -input=false -var-file=terraform.tfvars 2>&1 | tee terraform-output.log
           echo "Terraform deploy completed"
+
       - name: Get VM Public IP
         id: get_ip
         env:
@@ -98,3 +99,19 @@ jobs:
           IP=$(terraform output -raw agent_public_ip -no-color | tr -d '\r\n')
           echo "vm_ip=$IP" >> "$GITHUB_OUTPUT"
           echo "::notice:: VM Public IP: $IP"
+
+      
+      - name: Install tools via Ansible
+        uses: dawidd6/action-ansible-playbook@v2
+        with:
+          playbook: install-tools.yml
+          inventory: |
+            [windows]
+            ${{ steps.get_ip.outputs.vm_ip }} ansible_port=5985
+          options: |
+            -e ansible_user=${{ secrets.VM_ADMIN_USERNAME }}
+            -e ansible_password=${{ secrets.VM_ADMIN_PASSWORD }}
+            -e ansible_connection=winrm
+            -e ansible_winrm_transport=basic
+            -e ansible_winrm_server_cert_validation=ignore
+

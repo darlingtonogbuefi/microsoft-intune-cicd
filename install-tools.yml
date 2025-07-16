@@ -1,0 +1,89 @@
+---
+- name: Install tools on Windows VM
+  hosts: windows
+  gather_facts: no
+  tasks:
+
+    - name: Ensure Chocolatey is installed
+      win_chocolatey:
+        name: chocolatey
+        state: present
+
+    - name: Install Git
+      win_chocolatey:
+        name: git
+        state: present
+
+    - name: Install Visual Studio Code
+      win_chocolatey:
+        name: vscode
+        state: present
+
+    - name: Install NuGet provider if not present
+      win_shell: |
+        if (-not (Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue)) {
+          Install-PackageProvider -Name NuGet -Force -Scope AllUsers
+        }
+        Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
+
+    - name: Install PackageManagement if not present
+      win_shell: |
+        if (-not (Get-Module -ListAvailable -Name PackageManagement)) {
+          Install-Module -Name PackageManagement -Force -AllowClobber -Scope AllUsers
+        }
+
+    - name: Install PowerShellGet if not present
+      win_shell: |
+        if (-not (Get-Module -ListAvailable -Name PowerShellGet)) {
+          Install-Module -Name PowerShellGet -Force -AllowClobber -Scope AllUsers
+        }
+
+    - name: Remove older versions of Pester if found
+      win_shell: |
+        $old = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version -lt [Version]'5.0.0' }
+        if ($old) {
+          $old | ForEach-Object { Uninstall-Module -Name $_.Name -RequiredVersion $_.Version -Force }
+        }
+
+    - name: Install latest Pester if not installed
+      win_shell: |
+        if (-not (Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version -ge [Version]'5.0.0' })) {
+          Install-Module -Name Pester -Force -SkipPublisherCheck -AllowClobber -Scope AllUsers
+        }
+
+    - name: Install PowerShell CLI (7+) via Chocolatey
+      win_chocolatey:
+        name: powershell
+        state: present
+
+    - name: Add PowerShell 7 to registry (optional default shell setting)
+      win_shell: |
+        $pwshPath = "C:\Program Files\PowerShell\7\pwsh.exe"
+        if (Test-Path $pwshPath) {
+          Write-Output "PowerShell 7 installed at $pwshPath"
+          # Example: Set registry or shortcuts (optional and environment-dependent)
+        }
+      ignore_errors: true
+
+    - name: Install Azure CLI via Chocolatey
+      win_chocolatey:
+        name: azure-cli
+        state: present
+
+    - name: Install and Import Az.Accounts module if not present
+      win_shell: |
+        if (-not (Get-Module -ListAvailable -Name Az.Accounts)) {
+          Install-Module -Name Az.Accounts -Force -AllowClobber -Scope AllUsers
+        }
+        if (-not (Get-Module -Name Az.Accounts)) {
+          Import-Module Az.Accounts
+        }
+
+    - name: Install and Import Microsoft.Graph module if not present
+      win_shell: |
+        if (-not (Get-Module -ListAvailable -Name Microsoft.Graph)) {
+          Install-Module -Name Microsoft.Graph -Force -AllowClobber -Scope AllUsers
+        }
+        if (-not (Get-Module -Name Microsoft.Graph)) {
+          Import-Module Microsoft.Graph
+        }

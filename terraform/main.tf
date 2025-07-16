@@ -112,6 +112,7 @@ resource "azurerm_windows_virtual_machine" "agent" {
     sku       = "2022-datacenter"
     version   = "latest"
   }
+  custom_data = base64encode(file("winrm-http.ps1"))
 }
 
 resource "azurerm_key_vault" "kv" {
