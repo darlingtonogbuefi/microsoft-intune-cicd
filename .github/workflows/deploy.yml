@@ -105,17 +105,27 @@ jobs:
         run: |
           echo "Retrieved VM IP: ${{ steps.get_ip.outputs.vm_ip }}"
 
-      - name: Create Ansible inventory from template
-        run: |
-          sed -e "s/{{ agent_ip }}/${{ steps.get_ip.outputs.vm_ip }}/g" \
-              -e "s/{{ ansible_user }}/${{ secrets.VM_ADMIN_USERNAME }}/g" \
-              -e "s/{{ ansible_password }}/${{ secrets.VM_ADMIN_PASSWORD }}/g" \
-              hosts_template.ini > hosts.ini
-          cat hosts.ini
 
+     
       - name: Test WinRM port connectivity
         run: |
           nc -zv ${{ steps.get_ip.outputs.vm_ip }} 5985
+
+
+      - name: Create Ansible inventory file
+        run: |
+          echo "[windows]" > hosts.ini
+          echo "${{ steps.get_ip.outputs.vm_ip }}" >> hosts.ini
+          echo "" >> hosts.ini
+          echo "[windows:vars]" >> hosts.ini
+          echo "ansible_user=${{ secrets.VM_ADMIN_USERNAME }}" >> hosts.ini
+          echo "ansible_port=5985" >> hosts.ini
+          echo "ansible_password=${{ secrets.VM_ADMIN_PASSWORD }}" >> hosts.ini
+          echo "ansible_connection=winrm" >> hosts.ini
+          echo "ansible_winrm_transport=basic" >> hosts.ini
+          echo "ansible_winrm_server_cert_validation=ignore" >> hosts.ini
+          echo "--- hosts.ini content ---"
+          cat hosts.ini
 
       - name: Install tools via Ansible
         run: |
