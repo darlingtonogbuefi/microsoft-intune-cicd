@@ -61,3 +61,21 @@ variable "key_vault_name" {
   description = "Name of the Azure Key Vault"
   type        = string
 }
+
+variable "subscription_id" {
+  description = "Azure subscription ID"
+  type        = string
+  sensitive   = true
+}
+
+variable "client_id" {
+  description = "Azure client ID (Service Principal)"
+  type        = string
+  sensitive   = true
+}
+
+variable "client_secret" {
+  description = "Azure client secret (Service Principal)"
+  type        = string
+  sensitive   = true
+}
