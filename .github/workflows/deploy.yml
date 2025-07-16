@@ -100,11 +100,9 @@ jobs:
           RAW_IP=$(terraform output -raw agent_public_ip)
           echo "Raw IP output: $RAW_IP"
 
-          # Optional: sanitize if needed (in your case, raw is fine)
           CLEANED_IP=$(echo "$RAW_IP" | grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}')
           echo "Cleaned IP: $CLEANED_IP"
 
-          # Correct multi-line output format for GitHub Actions
           echo "vm_ip<<EOF" >> $GITHUB_OUTPUT
           echo "$CLEANED_IP" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
