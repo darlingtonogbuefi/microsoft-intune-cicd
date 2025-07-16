@@ -78,10 +78,9 @@ jobs:
           TF_VAR_tenant_id: ${{ fromJson(secrets.AZURE_CREDENTIALS).tenantId }}
           TF_VAR_admin_username: ${{ secrets.VM_ADMIN_USERNAME }}
           TF_VAR_admin_password: ${{ secrets.VM_ADMIN_PASSWORD }}
-          
 
         run: |
-          set -o pipefail   # <- THIS ensures pipeline fails if any command fails
+          set -o pipefail   # <- ensures pipeline fails if any command fails
           terraform -chdir=terraform init -input=false -backend=true
           terraform -chdir=terraform apply -auto-approve -input=false -var-file=terraform.tfvars 2>&1 | tee terraform-output.log
           echo "Terraform deploy completed"
@@ -117,7 +116,6 @@ jobs:
           echo "Testing WinRM connectivity..."
           nc -zv ${{ steps.get_ip.outputs.vm_ip }} 5985 || echo "Port 5985 is not reachable (yet)"
 
-
       - name: Create Ansible inventory file
         run: |
           echo "[windows]" > hosts.ini
@@ -133,7 +131,11 @@ jobs:
           echo "--- hosts.ini content ---"
           cat hosts.ini
 
+      - name: Install Ansible dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install "pywinrm>=0.4.2"
+
       - name: Install tools via Ansible
         run: |
           ansible-playbook install-tools.yml -i hosts.ini
-
