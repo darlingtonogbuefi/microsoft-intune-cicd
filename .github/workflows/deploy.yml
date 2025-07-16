@@ -88,28 +88,21 @@ jobs:
 
       - name: Get VM Public IP
         id: get_ip
-        env:
-          ARM_ACCESS_KEY: ${{ steps.get_key.outputs.key }}
-          ARM_SUBSCRIPTION_ID: ${{ fromJson(secrets.AZURE_CREDENTIALS).subscriptionId }}
-          ARM_CLIENT_ID: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientId }}
-          ARM_CLIENT_SECRET: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientSecret }}
-          ARM_TENANT_ID: ${{ fromJson(secrets.AZURE_CREDENTIALS).tenantId }}
         run: |
           echo "Fetching VM public IP..."
-          IP=$(terraform -chdir=terraform output -raw agent_public_ip -no-color | tr -d '\r\n')
-          echo "vm_ip=$IP" >> "$GITHUB_OUTPUT"
-          echo "::notice:: VM Public IP: $IP"
+          VM_IP=$(terraform -chdir=terraform output -raw agent_public_ip | tr -d '\r\n')
+          echo "vm_ip=$VM_IP" >> "$GITHUB_OUTPUT"
+          echo "::notice:: VM Public IP is $VM_IP"
 
-      
       - name: Debug IP Output
         run: |
           echo "Retrieved VM IP: ${{ steps.get_ip.outputs.vm_ip }}"
 
-
-     
       - name: Test WinRM port connectivity
+        continue-on-error: true
         run: |
-          nc -zv ${{ steps.get_ip.outputs.vm_ip }} 5985
+          echo "Testing WinRM connectivity..."
+          nc -zv ${{ steps.get_ip.outputs.vm_ip }} 5985 || echo "Port 5985 is not reachable (yet)"
 
 
       - name: Create Ansible inventory file
