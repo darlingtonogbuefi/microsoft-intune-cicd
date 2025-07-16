@@ -9,7 +9,6 @@
 crash.log
 
 # Ignore variable files with sensitive info
-*.tfvars
 *.tfvars.json
 
 # Override files
