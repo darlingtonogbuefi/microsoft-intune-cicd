@@ -9,10 +9,7 @@ if ($repo -and $repo.InstallationPolicy -ne 'Trusted') {
     Set-PSRepository -Name 'PSGallery' -InstallationPolicy Trusted
 }
 
-### ------------------------
-### PowerShellGet and PackageManagement
-### ------------------------
-
+# PowerShellGet and PackageManagement
 if (-not (Get-InstalledModule -Name PackageManagement -ErrorAction SilentlyContinue)) {
     Install-Module -Name PackageManagement -Force -Scope CurrentUser -AllowClobber
 }
@@ -21,10 +18,8 @@ if (-not (Get-InstalledModule -Name PowerShellGet -ErrorAction SilentlyContinue)
     Install-Module -Name PowerShellGet -Force -Scope CurrentUser -AllowClobber
 }
 
-### ------------------------
-### Pester Management
-### ------------------------
 
+# Pester Management
 $latestPesterVersion = (Find-Module -Name Pester).Version
 $installedPesterModules = Get-InstalledModule -Name Pester -AllVersions -ErrorAction SilentlyContinue
 
@@ -39,19 +34,15 @@ if (-not ($installedPesterModules | Where-Object { $_.Version -eq $latestPesterV
 }
 Import-Module Pester -Force
 
-### ------------------------
-### Az.Accounts Module
-### ------------------------
 
+# Az.Accounts Module
 if (-not (Get-Module -ListAvailable -Name Az.Accounts)) {
     Install-Module -Name Az.Accounts -Force -Scope AllUsers
 }
 Import-Module Az.Accounts -Force
 
-### ------------------------
-### Microsoft.Graph Module
-### ------------------------
 
+# Microsoft.Graph Module
 $latestGraphVersion = (Find-Module -Name Microsoft.Graph).Version
 $installedGraphModules = Get-InstalledModule -Name Microsoft.Graph -AllVersions -ErrorAction SilentlyContinue
 
@@ -71,10 +62,8 @@ if (-not (Get-Module Microsoft.Graph.DeviceManagement.Administration)) {
 }
 
 
-### ------------------------
-### Azure CLI
-### ------------------------
 
+# Azure CLI
 if (-not (Get-Command az -ErrorAction SilentlyContinue)) {
     $azInstaller = "$env:TEMP\AzureCLI.msi"
     Invoke-WebRequest -Uri "https://aka.ms/installazurecliwindows" -OutFile $azInstaller
@@ -82,10 +71,8 @@ if (-not (Get-Command az -ErrorAction SilentlyContinue)) {
     Remove-Item $azInstaller -Force
 }
 
-### ------------------------
-### Python
-### ------------------------
 
+# Python
 if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
     $pythonInstaller = "$env:TEMP\python-installer.exe"
     Invoke-WebRequest -Uri "https://www.python.org/ftp/python/3.12.0/python-3.12.0-amd64.exe" -OutFile $pythonInstaller
@@ -93,9 +80,8 @@ if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
     Remove-Item $pythonInstaller -Force
 }
 
-### ------------------------
-### PowerShell CLI 7.5.2 (pwsh)
-### ------------------------
+
+# PowerShell CLI 7.5.2
 
 if (-not (Get-Command pwsh -ErrorAction SilentlyContinue)) {
     $pwshInstaller = "$env:TEMP\PowerShell-7.msi"

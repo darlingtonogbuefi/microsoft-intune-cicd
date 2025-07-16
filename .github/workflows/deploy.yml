@@ -47,7 +47,7 @@ jobs:
 
       - name: Create Blob Container for TF State
         run: |
-          echo "🪣 Creating blob container for Terraform state..."
+          echo "Creating blob container for Terraform state..."
           az storage container create \
             --name tfstate \
             --account-name tfstatestorage946 \
