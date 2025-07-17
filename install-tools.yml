@@ -1,5 +1,4 @@
----
-- name: Install tools on Windows VM
+- name: Configure Windows VM - PowerShell, Python & Tools
   hosts: windows
   gather_facts: no
   tasks:
@@ -9,61 +8,61 @@
         name: chocolatey
         state: present
 
-    - name: Install Git
-      win_chocolatey:
-        name: git
-        state: present
-
-    - name: Install Visual Studio Code
-      win_chocolatey:
-        name: vscode
-        state: present
-
-    - name: Install NuGet provider if not present
+    - name: Install latest PowerShell 7 using winget
       win_shell: |
-        if (-not (Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue)) {
-          Install-PackageProvider -Name NuGet -Force -Scope AllUsers
-        }
-        Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
-
-    - name: Install PackageManagement if not present
-      win_shell: |
-        if (-not (Get-Module -ListAvailable -Name PackageManagement)) {
-          Install-Module -Name PackageManagement -Force -AllowClobber -Scope AllUsers
+        $installed = Get-Command pwsh.exe -ErrorAction SilentlyContinue
+        if (-not $installed) {
+          winget install --id Microsoft.Powershell --source winget --accept-package-agreements --accept-source-agreements
         }
 
-    - name: Install PowerShellGet if not present
+    - name: Verify PowerShell 7 installation
       win_shell: |
-        if (-not (Get-Module -ListAvailable -Name PowerShellGet)) {
-          Install-Module -Name PowerShellGet -Force -AllowClobber -Scope AllUsers
+        $pwshPath = "C:\Program Files\PowerShell\7\pwsh.exe"
+        if (-not (Test-Path $pwshPath)) {
+          Write-Error "PowerShell 7 was not installed correctly."
         }
 
-    - name: Remove older versions of Pester if found
+    - name: Set PowerShell 7 as the default shell in registry
+      win_shell: |
+        $pwshPath = "C:\Program Files\PowerShell\7\pwsh.exe"
+        if (Test-Path $pwshPath) {
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" -Name "Shell" -Value $pwshPath
+        }
+      ignore_errors: true
+
+    - name: Remove old versions of Pester (< 5.0.0)
       win_shell: |
         $old = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version -lt [Version]'5.0.0' }
         if ($old) {
           $old | ForEach-Object { Uninstall-Module -Name $_.Name -RequiredVersion $_.Version -Force }
         }
 
-    - name: Install latest Pester if not installed
+    - name: Install latest Pester (>= 5.0.0)
       win_shell: |
         if (-not (Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version -ge [Version]'5.0.0' })) {
           Install-Module -Name Pester -Force -SkipPublisherCheck -AllowClobber -Scope AllUsers
         }
 
-    - name: Install PowerShell CLI (7+) via Chocolatey
+    - name: Install Python via Chocolatey
       win_chocolatey:
-        name: powershell
+        name: python
         state: present
 
-    - name: Add PowerShell 7 to registry (optional default shell setting)
+    - name: Ensure Python is added to system PATH
+      win_environment:
+        name: Path
+        state: present
+        level: machine
+        value: C:\Python39\Scripts\;C:\Python39\
+
+    - name: Upgrade pip to the latest version
       win_shell: |
-        $pwshPath = "C:\Program Files\PowerShell\7\pwsh.exe"
-        if (Test-Path $pwshPath) {
-          Write-Output "PowerShell 7 installed at $pwshPath"
-          # Example: Set registry or shortcuts (optional and environment-dependent)
-        }
-      ignore_errors: true
+        python -m ensurepip --upgrade
+        python -m pip install --upgrade pip
+
+    - name: Install common pip packages
+      win_shell: |
+        python -m pip install virtualenv requests setuptools wheel
 
     - name: Install Azure CLI via Chocolatey
       win_chocolatey:
@@ -89,3 +88,18 @@
             Import-Module $module
           }
         }
+
+    - name: Create PowerShell 7 desktop shortcut
+      win_shortcut:
+        path: "{{ ansible_env.PUBLIC }}\\Desktop\\PowerShell 7.lnk"
+        target: "C:\\Program Files\\PowerShell\\7\\pwsh.exe"
+        description: "PowerShell 7 Desktop Shortcut"
+        icon: "C:\\Program Files\\PowerShell\\7\\pwsh.exe"
+
+    - name: Create Pester desktop shortcut (opens PowerShell 7)
+      win_shortcut:
+        path: "{{ ansible_env.PUBLIC }}\\Desktop\\Pester.lnk"
+        target: "C:\\Program Files\\PowerShell\\7\\pwsh.exe"
+        arguments: "-NoExit -Command Import-Module Pester"
+        description: "PowerShell with Pester loaded"
+        icon: "C:\\Program Files\\PowerShell\\7\\pwsh.exe"
