@@ -1,6 +1,6 @@
 - name: Configure Windows VM - Install PowerShell, Python, CLI tools
   hosts: windows
-  gather_facts: no
+  gather_facts: yes
   tasks:
 
     - name: Ensure Chocolatey is installed
