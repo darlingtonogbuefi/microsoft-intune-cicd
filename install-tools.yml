@@ -22,10 +22,10 @@
           [Environment]::SetEnvironmentVariable('Path', $newPath, 'Machine')
         }
 
-    - name: Verify PowerShell 7 is on the path
+    - name: Verify PowerShell 7 is installed at expected path
       win_shell: |
-        if (-not (Get-Command pwsh.exe -ErrorAction SilentlyContinue)) {
-          Write-Error "pwsh.exe not found in PATH"
+        if (-not (Test-Path "C:\Program Files\PowerShell\7\pwsh.exe")) {
+          Write-Error "PowerShell 7 was not installed at the expected path."
         }
 
     - name: Install Pester if not already installed or outdated
