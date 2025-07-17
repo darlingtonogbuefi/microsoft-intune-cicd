@@ -1,4 +1,4 @@
-- name: Configure Windows VM - PowerShell, Python & Tools
+- name: Configure Windows VM - Install PowerShell, Python, CLI tools
   hosts: windows
   gather_facts: no
   tasks:
@@ -8,89 +8,31 @@
         name: chocolatey
         state: present
 
-    - name: Uninstall existing PowerShell 7+ versions (if any)
+    - name: Install PowerShell 7 if not already installed
       win_shell: |
-        $installed = Get-WmiObject -Class Win32_Product | Where-Object { $_.Name -like "PowerShell*" -and $_.Name -match "7" }
-        foreach ($app in $installed) {
-          Write-Output "Uninstalling $($app.Name)"
-          $app.Uninstall() | Out-Null
-        }
-      ignore_errors: yes
-
-    - name: Remove PowerShell 7 folder if exists
-      win_file:
-        path: "C:\\Program Files\\PowerShell\\7"
-        state: absent
-
-    - name: Install latest PowerShell 7 via Chocolatey
-      win_chocolatey:
-        name: powershell
-        state: present
-
-    - name: Verify PowerShell 7 installation (search pwsh.exe with Get-Command)
-      win_shell: |
-        $pwsh = Get-Command pwsh.exe -ErrorAction SilentlyContinue
-        if (-not $pwsh) {
-          Write-Error "PowerShell 7 executable pwsh.exe not found in PATH."
+        if (-not (Test-Path "C:\Program Files\PowerShell\7\pwsh.exe")) {
+          choco install powershell -y
         }
 
-    - name: Remove old versions of Pester (< 5.0.0)
+    - name: Add PowerShell 7 to system PATH if not present
       win_shell: |
-        $old = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version -lt [Version]'5.0.0' }
-        if ($old) {
-          $old | ForEach-Object { Uninstall-Module -Name $_.Name -RequiredVersion $_.Version -Force }
+        $path = [Environment]::GetEnvironmentVariable('Path', 'Machine')
+        if ($path -notlike '*C:\Program Files\PowerShell\7*') {
+          $newPath = "C:\Program Files\PowerShell\7;" + $path
+          [Environment]::SetEnvironmentVariable('Path', $newPath, 'Machine')
         }
 
-    - name: Install latest Pester (>= 5.0.0)
+    - name: Verify PowerShell 7 is on the path
       win_shell: |
-        if (-not (Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version -ge [Version]'5.0.0' })) {
+        if (-not (Get-Command pwsh.exe -ErrorAction SilentlyContinue)) {
+          Write-Error "pwsh.exe not found in PATH"
+        }
+
+    - name: Install Pester if not already installed or outdated
+      win_shell: |
+        $installed = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version -ge [Version]'5.0.0' }
+        if (-not $installed) {
           Install-Module -Name Pester -Force -SkipPublisherCheck -AllowClobber -Scope AllUsers
-        }
-
-    - name: Install Python via Chocolatey
-      win_chocolatey:
-        name: python
-        state: present
-
-    - name: Ensure Python is added to system PATH
-      win_environment:
-        name: Path
-        state: present
-        level: machine
-        value: C:\Python39\Scripts\;C:\Python39\
-
-    - name: Upgrade pip to the latest version
-      win_shell: |
-        python -m ensurepip --upgrade
-        python -m pip install --upgrade pip
-
-    - name: Install common pip packages
-      win_shell: |
-        python -m pip install virtualenv requests setuptools wheel
-
-    - name: Install Azure CLI via Chocolatey
-      win_chocolatey:
-        name: azure-cli
-        state: present
-
-    - name: Install and Import Az.Accounts module if not present
-      win_shell: |
-        if (-not (Get-Module -ListAvailable -Name Az.Accounts)) {
-          Install-Module -Name Az.Accounts -Force -AllowClobber -Scope AllUsers
-        }
-        if (-not (Get-Module -Name Az.Accounts)) {
-          Import-Module Az.Accounts
-        }
-
-    - name: Install and Import Microsoft.Graph modules if not present
-      win_shell: |
-        foreach ($module in @("Microsoft.Graph.Authentication", "Microsoft.Graph.DeviceManagement.Administration")) {
-          if (-not (Get-Module -ListAvailable -Name $module)) {
-            Install-Module -Name $module -Force -AllowClobber -Scope AllUsers
-          }
-          if (-not (Get-Module -Name $module)) {
-            Import-Module $module
-          }
         }
 
     - name: Create PowerShell 7 desktop shortcut
@@ -100,10 +42,35 @@
         description: "PowerShell 7 Desktop Shortcut"
         icon: "C:\\Program Files\\PowerShell\\7\\pwsh.exe"
 
-    - name: Create Pester desktop shortcut (opens PowerShell 7)
-      win_shortcut:
-        path: "{{ ansible_env.PUBLIC }}\\Desktop\\Pester.lnk"
-        target: "C:\\Program Files\\PowerShell\\7\\pwsh.exe"
-        arguments: "-NoExit -Command Import-Module Pester"
-        description: "PowerShell with Pester loaded"
-        icon: "C:\\Program Files\\PowerShell\\7\\pwsh.exe"
+    - name: Install Python if not present
+      win_shell: |
+        if (-not (Get-Command python.exe -ErrorAction SilentlyContinue)) {
+          choco install python -y
+        }
+
+    - name: Upgrade pip and install common packages
+      win_shell: |
+        if (Get-Command python.exe -ErrorAction SilentlyContinue) {
+          python -m ensurepip --upgrade
+          python -m pip install --upgrade pip virtualenv requests setuptools wheel
+        }
+
+    - name: Install Azure CLI if not present
+      win_shell: |
+        if (-not (Get-Command az -ErrorAction SilentlyContinue)) {
+          choco install azure-cli -y
+        }
+
+    - name: Install Az.Accounts module if not present
+      win_shell: |
+        if (-not (Get-Module -ListAvailable -Name Az.Accounts)) {
+          Install-Module -Name Az.Accounts -Force -AllowClobber -Scope AllUsers
+        }
+
+    - name: Install Microsoft.Graph modules if not present
+      win_shell: |
+        foreach ($module in @("Microsoft.Graph.Authentication", "Microsoft.Graph.DeviceManagement.Administration")) {
+          if (-not (Get-Module -ListAvailable -Name $module)) {
+            Install-Module -Name $module -Force -AllowClobber -Scope AllUsers
+          }
+        }
