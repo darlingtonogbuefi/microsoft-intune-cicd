@@ -8,12 +8,10 @@
         name: chocolatey
         state: present
 
-    - name: Install latest PowerShell 7 using winget
-      win_shell: |
-        $installed = Get-Command pwsh.exe -ErrorAction SilentlyContinue
-        if (-not $installed) {
-          winget install --id Microsoft.Powershell --source winget --accept-package-agreements --accept-source-agreements
-        }
+    - name: Install PowerShell 7 via Chocolatey
+      win_chocolatey:
+        name: powershell
+        state: present
 
     - name: Verify PowerShell 7 installation
       win_shell: |
