@@ -1,8 +1,8 @@
 - name: Configure Windows VM - Install PowerShell, Python, CLI tools
   hosts: windows
   gather_facts: yes
-
   tasks:
+
     - name: Ensure Chocolatey is installed
       win_chocolatey:
         name: chocolatey
@@ -33,11 +33,17 @@
           Write-Error "PowerShell 7+ was not installed at the expected path."
         }
 
-    - name: Install Pester if not installed or outdated
+    - name: Remove older versions of Pester if found
       win_shell: |
-        $installed = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version -ge [Version]'5.0.0' }
-        if (-not $installed) {
-          Install-Module -Name Pester -Force -Confirm:$false -SkipPublisherCheck -AllowClobber -Scope AllUsers
+        $old = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version -lt [Version]'5.0.0' }
+        if ($old) {
+          $old | ForEach-Object { Uninstall-Module -Name $_.Name -RequiredVersion $_.Version -Force }
+        }
+
+    - name: Install latest Pester if not installed
+      win_shell: |
+        if (-not (Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version -ge [Version]'5.0.0' })) {
+          Install-Module -Name Pester -Force -SkipPublisherCheck -AllowClobber -Scope AllUsers
         }
 
     - name: Create PowerShell 7 desktop shortcut
@@ -69,13 +75,13 @@
     - name: Install Az.Accounts module if not present
       win_shell: |
         if (-not (Get-Module -ListAvailable -Name Az.Accounts)) {
-          Install-Module -Name Az.Accounts -Force -AllowClobber -Confirm:$false -Scope AllUsers
+          Install-Module -Name Az.Accounts -Force -AllowClobber -Scope AllUsers
         }
 
     - name: Install Microsoft.Graph modules if not present
       win_shell: |
         foreach ($module in @("Microsoft.Graph.Authentication", "Microsoft.Graph.DeviceManagement.Administration")) {
           if (-not (Get-Module -ListAvailable -Name $module)) {
-            Install-Module -Name $module -Force -AllowClobber -Confirm:$false -Scope AllUsers
+            Install-Module -Name $module -Force -AllowClobber -Scope AllUsers
           }
         }
