@@ -8,13 +8,18 @@
         name: chocolatey
         state: present
 
-    - name: Install PowerShell 7 if not already installed
+    - name: Install latest PowerShell (pwsh) from GitHub releases if not installed
       win_shell: |
-        if (-not (Test-Path "C:\Program Files\PowerShell\7\pwsh.exe")) {
-          choco install powershell -y
+        if (-not (Get-Command pwsh -ErrorAction SilentlyContinue)) {
+          $latestRelease = Invoke-RestMethod -Uri "https://api.github.com/repos/PowerShell/PowerShell/releases/latest"
+          $msiAsset = $latestRelease.assets | Where-Object { $_.name -like "*win-x64.msi" } | Select-Object -First 1
+          $pwshInstaller = "$env:TEMP\$($msiAsset.name)"
+          Invoke-WebRequest -Uri $msiAsset.browser_download_url -OutFile $pwshInstaller
+          Start-Process msiexec.exe -ArgumentList "/i", "`"$pwshInstaller`"", "/quiet", "/norestart" -Wait
+          Remove-Item $pwshInstaller -Force
         }
 
-    - name: Add PowerShell 7 to system PATH if not present
+    - name: Add PowerShell 7+ to system PATH if not present
       win_shell: |
         $path = [Environment]::GetEnvironmentVariable('Path', 'Machine')
         if ($path -notlike '*C:\Program Files\PowerShell\7*') {
@@ -22,13 +27,13 @@
           [Environment]::SetEnvironmentVariable('Path', $newPath, 'Machine')
         }
 
-    - name: Verify PowerShell 7 is installed at expected path
+    - name: Verify PowerShell 7+ is installed at expected path
       win_shell: |
         if (-not (Test-Path "C:\Program Files\PowerShell\7\pwsh.exe")) {
-          Write-Error "PowerShell 7 was not installed at the expected path."
+          Write-Error "PowerShell 7+ was not installed at the expected path."
         }
 
-    - name: Install Pester if not already installed or outdated
+    - name: Install Pester if not installed or outdated
       win_shell: |
         $installed = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version -ge [Version]'5.0.0' }
         if (-not $installed) {
