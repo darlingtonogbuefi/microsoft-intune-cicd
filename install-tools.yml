@@ -33,6 +33,12 @@
           Write-Error "PowerShell 7+ was not installed at the expected path."
         }
 
+    - name: Ensure NuGet provider is installed silently
+      win_shell: |
+        if (-not (Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue)) {
+          Install-PackageProvider -Name NuGet -Force -Scope AllUsers
+        }
+
     - name: Remove older versions of Pester if found
       win_shell: |
         $old = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version -lt [Version]'5.0.0' }
@@ -40,10 +46,10 @@
           $old | ForEach-Object { Uninstall-Module -Name $_.Name -RequiredVersion $_.Version -Force }
         }
 
-    - name: Install latest Pester if not installed
+    - name: Install latest Pester non-interactively
       win_shell: |
         if (-not (Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version -ge [Version]'5.0.0' })) {
-          Install-Module -Name Pester -Force -SkipPublisherCheck -AllowClobber -Scope AllUsers
+          Install-Module -Name Pester -Force -SkipPublisherCheck -AllowClobber -Confirm:$false -Scope AllUsers
         }
 
     - name: Create PowerShell 7 desktop shortcut
