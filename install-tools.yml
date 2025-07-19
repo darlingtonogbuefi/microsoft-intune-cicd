@@ -84,10 +84,20 @@
           Install-Module -Name Az.Accounts -Force -AllowClobber -Scope AllUsers
         }
 
-    - name: Install Microsoft.Graph modules if not present
+    - name: Install full Microsoft.Graph module and import selected submodules if not already imported
       win_shell: |
-        foreach ($module in @("Microsoft.Graph.Authentication", "Microsoft.Graph.DeviceManagement.Administration")) {
-          if (-not (Get-Module -ListAvailable -Name $module)) {
-            Install-Module -Name $module -Force -AllowClobber -Scope AllUsers
+        if (-not (Get-Module -ListAvailable -Name Microsoft.Graph)) {
+        Install-Module -Name Microsoft.Graph -Force -AllowClobber -Scope AllUsers
+        }
+
+        $selectedModules = @(
+        "Microsoft.Graph.Authentication",
+        "Microsoft.Graph.DeviceManagement.Administration"
+        )
+
+        foreach ($module in $selectedModules) {
+          if (-not (Get-Module -Name $module)) {
+            Import-Module -Name $module -Global
           }
         }
+      

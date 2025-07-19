@@ -37,9 +37,22 @@ jobs:
               Install-Module Microsoft.Graph -Force -Scope CurrentUser -AllowClobber
           }
 
-          if (-not (Get-Module -Name Microsoft.Graph)) {
-              Import-Module Microsoft.Graph
+       
+          if (-not (Get-Module -ListAvailable -Name Microsoft.Graph)) {
+          Install-Module -Name Microsoft.Graph -Force -AllowClobber -Scope AllUsers
           }
+
+          $selectedModules = @(
+          "Microsoft.Graph.Authentication",
+          "Microsoft.Graph.DeviceManagement.Administration"
+          )
+
+          foreach ($module in $selectedModules) {
+            if (-not (Get-Module -Name $module)) {
+              Import-Module -Name $module -Global
+            }
+          }
+
 
           $secureSecret = ConvertTo-SecureString $clientSecret -AsPlainText -Force
           $cred = New-Object System.Management.Automation.PSCredential ($clientId, $secureSecret)

@@ -6,7 +6,6 @@ trigger:
 variables:
 - group: KeyVault-Secrets
 - group: notifications
-#- group: IntuneGroupId
 - name: SCRIPT_FOLDER
   value: 'intune-scripts'
 - name: TEST_FOLDER
