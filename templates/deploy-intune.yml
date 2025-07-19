@@ -23,7 +23,7 @@ jobs:
 
           $tenantId = "$(TenantId)"
           $clientId = "$(ClientId)"
-          $clientSecret = "$(ClientSecret)"
+          $clientSecret = "$(Client-Secret)"
 
           if (-not (Get-Module -ListAvailable -Name Az.Accounts)) {
               Install-Module Az.Accounts -Force -Scope CurrentUser -AllowClobber
