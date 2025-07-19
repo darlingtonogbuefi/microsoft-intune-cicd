@@ -69,9 +69,9 @@ stages:
 
   - template: templates/assign-policy.yml
     parameters:
-      tenantId: $(TenantId)
-      clientId: $(ClientId)
-      clientSecret: $(Client-Secret)
+      tenantId: $(MyTenantId)
+      clientId: $(MyAppClientId)
+      clientSecret: $(MyClientSecret)
       targetGroupId: $(IntuneGroupId)       # from variable group 'targetgroupid'
       scriptIds: $[ stageDependencies.AssignPolicies.ParseAssignments.outputs['SetAssignments.scriptIds'] ]
 
