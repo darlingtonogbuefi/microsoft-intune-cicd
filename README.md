@@ -1,4 +1,4 @@
-# End-to-End CI/CD Pipeline for PowerShell Script Deployment with Intune
+# End-to-End CI/CD Pipeline for Scripts Deployment with Intune
 
 ## Overview
 
