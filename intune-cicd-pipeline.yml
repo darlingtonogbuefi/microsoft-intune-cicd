@@ -72,8 +72,8 @@ stages:
     parameters:
       tenantId: $(TenantId)
       clientId: $(ClientId)
-      clientSecret: $(clientsecret4053)
-      targetGroupId: $(intunegroupid)       # from variable group 'targetgroupid'
+      clientSecret: $(ClientSecret)
+      targetGroupId: $(IntuneGroupId)       # from variable group 'targetgroupid'
       scriptIds: $[ stageDependencies.AssignPolicies.ParseAssignments.outputs['SetAssignments.scriptIds'] ]
 
 
