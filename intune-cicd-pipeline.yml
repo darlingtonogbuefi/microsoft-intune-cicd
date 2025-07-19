@@ -80,7 +80,7 @@ stages:
 - stage: NotifyMsTeamsAndSlack
   displayName: Notify Slack & Teams
   dependsOn:
-    - DeployToIntune
+    - AssignPolicies
   condition: always()
   jobs:
   - template: templates/notify-slack.yml
