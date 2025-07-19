@@ -21,7 +21,7 @@ jobs:
             exit 1
           }
 
-          $tenantId = "$(TenantId)"
+          $tenantId = "$(MyTenantId)"
           $clientId = "$(MyAppClientId)"
           $clientSecret = "$(MyClientSecret)"
 
