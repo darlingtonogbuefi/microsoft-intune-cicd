@@ -224,7 +224,7 @@ On GitHub commits (auto)
 Or manually: Pipelines → Run Pipeline
 
 
-🧑‍💻 13. Trigger the Deployment Workflow
+🧑‍💻 13. Trigger the cleanup Workflow
 Run the deployment GitHub Actions workflow:
 
 gh workflow run detroy.yml --ref main
