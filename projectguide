@@ -92,8 +92,14 @@ git add .
 git commit -m "Updated fileUris to point to my own repo"
 git push origin main
 
+🧑‍💻 6. Trigger the Deployment Workflow
+Run the deployment GitHub Actions workflow:
 
-🖥 Step 6: Connect to Azure VM and Install Agent
+
+gh workflow run deploy.yml --ref main
+
+
+🖥 Step 7: Connect to Azure VM and Install Agent
 
 After deployment:
 a. Go to Azure Portal → Resource Groups → Your VM → Connect (RDP)
@@ -118,7 +124,7 @@ e. Start the agent (if not already started):
 .\run.cmd
 
 
-🔗 Step 7: Configure Azure DevOps Service Connection
+🔗 Step 8: Configure Azure DevOps Service Connection
 DevOps → Project Settings → Service Connections
 
 Add new Azure Resource Manager connection:
@@ -127,7 +133,7 @@ Scope: Subscription / Management Group
 Check Grant access permission to all pipelines
 
 
-🔐 Step 8: Azure Key Vault Configuration
+🔐 Step 9: Azure Key Vault Configuration
 a. Key Vault Setup
 Go to your Key Vault in Azure
 
@@ -164,7 +170,7 @@ IntuneGroupId	  Intune security group      Object ID
 
 
 
-📦 Step 9: Create Notifications Variable Group
+📦 Step 10: Create Notifications Variable Group
 
 a. Get Webhook URLs
 Slack:
@@ -189,7 +195,7 @@ Save the group
 
 
 
-🔐 Step 10: Connect Azure Key Vault to DevOps
+🔐 Step 11: Connect Azure Key Vault to DevOps
 DevOps → Pipelines → Library → + Variable Group
 
 Name: KeyVault-Secrets
@@ -205,7 +211,7 @@ Save
 Ensure your service connection has Get and List permissions on the Key Vault.
 
 
-🚀 Step 11: Run the CI/CD Pipeline
+🚀 Step 12: Run the CI/CD Pipeline
 a. Create and Connect Pipeline
 Azure DevOps → Pipelines → New Pipeline
 Choose GitHub → Authorize
@@ -216,6 +222,12 @@ b. Trigger the Pipeline
 On GitHub commits (auto)
 
 Or manually: Pipelines → Run Pipeline
+
+
+🧑‍💻 13. Trigger the Deployment Workflow
+Run the deployment GitHub Actions workflow:
+
+gh workflow run detroy.yml --ref main
 
 
 
