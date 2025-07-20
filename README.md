@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project provides a CI/CD pipeline that automates the testing, deployment, and assignment of scripts in Microsoft Intune. It integrates several DevOps tools and Azure services to streamline infrastructure provisioning, configuration management, and script delivery.
+Integrate DevOps principles in endpoint management. Leverages several DevOps tools and Azure services to streamline infrastructure provisioning, configuration management, and script delivery.
 
 The solution enables:
 - Infrastructure provisioning with Terraform + GitActions (Workflow)
