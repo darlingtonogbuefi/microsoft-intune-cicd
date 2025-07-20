@@ -17,14 +17,13 @@ The solution enables:
 
 ## Architecture
 
-  Dev[Developer Push]
   GitHub[GitHub Repo]
-  Actions[GitHub Actions CI]
+  Actions[GitHub Actions]
   Tests[Pester & PSScriptAnalyzer]
   Terraform[Terraform (Provision Infra)]
-  Ansible[Ansible (Configure Agent, Key Vault)]
+  Ansible[Ansible (Configure Agent)]
   KeyVault[Azure Key Vault]
-  ADO[Azure DevOps Pipeline (CD)]
+  ADO[Azure DevOps Pipeline (CI/CD)]
   Intune[Microsoft Intune]
   Group[Azure AD Group]
 
