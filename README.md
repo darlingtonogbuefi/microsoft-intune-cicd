@@ -1,4 +1,4 @@
-# End-to-End CI/CD Pipeline for Scripts Deployment with Intune
+# End-to-End CICD pipeline to test, deploy and assign scripts in Microsoft Intune
 
 ## Overview
 
