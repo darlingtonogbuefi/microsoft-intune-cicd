@@ -8,7 +8,7 @@ The solution enables:
 - Infrastructure provisioning with Terraform + GitActions (Workflow)
 - Configuration management with Ansible + GitActions (Workflow)
 - Automated linting and unit testing of scripts
-- CI/CD with Azure DevOps via self-hosted Azure DevOps agents
+- CI/CD with Azure DevOps on self-hosted Azure DevOps agents
 - Secure secret handling with Azure Key Vault and GitHub Secrets
 - Script deployment and assignment in Intune via Microsoft Graph API
 - Notification via webhooks (Slack and Microsoft Teams)
