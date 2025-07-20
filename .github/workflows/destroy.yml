@@ -66,7 +66,7 @@ jobs:
           echo "Deleting Terraform state resource group (tfstate-rg)..."
           az group delete --name tfstate-rg --yes --no-wait || echo "tfstate-rg not found"
 
-      - name: Delete NetworkWatcherRG (optional)
+      - name: Delete NetworkWatcherRG
         run: |
-          echo "Deleting NetworkWatcherRG (optional)..."
+          echo "Deleting NetworkWatcherRG"
           az group delete --name NetworkWatcherRG --yes --no-wait || echo "NetworkWatcherRG not found or auto-managed"
