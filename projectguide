@@ -6,6 +6,7 @@ Install the following tools and ensure they are in your system PATH:
 
 Git
 GitHub CLI (gh)
+Terraform
 Azure CLI
 PowerShell (latest)
 Visual Studio Code
