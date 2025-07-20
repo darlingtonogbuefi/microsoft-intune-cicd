@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project provides a complete CI/CD pipeline that automates testing, provisioning, configuration management, and deployment of PowerShell scripts to Microsoft Intune. It leverages multiple DevOps tools including GitHub Actions, Azure DevOps Pipelines, Terraform, Ansible, and Azure services like Key Vault and Intune.
+This project provides a CI/CD pipeline that automates the testing, deployment, and assignment of scripts in Microsoft Intune. It integrates several DevOps tools and Azure services to streamline infrastructure provisioning, configuration management, and script delivery.
 
 The solution enables:
 - Infrastructure provisioning with Terraform + GitActions (Workflow)
