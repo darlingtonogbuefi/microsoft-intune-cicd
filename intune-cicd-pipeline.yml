@@ -81,7 +81,7 @@ stages:
   displayName: Notify Slack & Teams
   dependsOn:
     - AssignPolicies
-  condition: always()
+  condition: succeeded('AssignPolicies')
   jobs:
   - template: templates/notify-slack.yml
     parameters:
