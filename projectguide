@@ -115,6 +115,9 @@ c. Extract the downloaded ZIP into the agent folder:
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem  
 [System.IO.Compression.ZipFile]::ExtractToDirectory("$HOME\Downloads\vsts-agent-win-x64-4.258.1.zip", "$PWD")
+
+Alternatively, you can manual extract and copy the extracted file into your agent folder
+
 d. Configure the agent:
 Run the following command and follow the prompts:
 
