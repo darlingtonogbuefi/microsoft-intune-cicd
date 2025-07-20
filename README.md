@@ -21,7 +21,7 @@ The solution enables:
   Actions[GitHub Actions]
   Tests[Pester & PSScriptAnalyzer]
   Terraform[Terraform (Provision Infra)]
-  Ansible[Ansible (Configure Agent)]
+  Ansible[Ansible (Configuration management)]
   KeyVault[Azure Key Vault]
   ADO[Azure DevOps Pipeline (CI/CD)]
   Intune[Microsoft Intune]
