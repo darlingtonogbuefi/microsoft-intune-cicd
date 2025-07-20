@@ -5,11 +5,11 @@
 This project provides a complete CI/CD pipeline that automates testing, provisioning, configuration management, and deployment of PowerShell scripts to Microsoft Intune. It leverages multiple DevOps tools including GitHub Actions, Azure DevOps Pipelines, Pester, PSScriptAnalyzer, Terraform, Ansible, and Azure services like Key Vault and Intune.
 
 The solution enables:
-- Automated linting and unit testing of PowerShell scripts
 - Infrastructure provisioning with Terraform + GitActions (Workflow)
 - Configuration management with Ansible + GitActions (Workflow)
-- Secure secret handling with Azure Key Vault and GitHub Secrets
+- Automated linting and unit testing of scripts
 - CI/CD with Azure DevOps
+- Secure secret handling with Azure Key Vault and GitHub Secrets
 - Script deployment and assignment in Intune via Microsoft Graph API
 - Execution via self-hosted Azure DevOps agents
 
