@@ -1,4 +1,4 @@
-# End-to-End CICD pipeline to test, deploy and assign scripts in Microsoft Intune
+# End-to-End CICD pipeline to test, deploy and assign scripts to security groups in Microsoft Intune
 
 ## Overview
 
