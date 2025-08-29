@@ -1,0 +1,34 @@
+jobs:
+- job: DiscoverFiles
+  pool:
+    name: Default
+  steps:
+    - checkout: self
+
+    - task: PowerShell@2
+      name: SetVars 
+      displayName: 'Discover Script and Test Files'
+      inputs:
+        targetType: inline
+        pwsh: true
+        script: |
+          $scriptFolder = "$(System.DefaultWorkingDirectory)/$(SCRIPT_FOLDER)"
+          $testFolder = "$(System.DefaultWorkingDirectory)/$(TEST_FOLDER)"
+
+          $scriptFiles = Get-ChildItem -Path $scriptFolder -Filter '*.ps1' -File | Where-Object { $_.Name -notlike '*Tests.ps1' }
+          $testFiles = Get-ChildItem -Path $testFolder -Filter '*.Tests.ps1' -File
+
+          if (-not $scriptFiles) {
+            Write-Error "No .ps1 scripts found in $scriptFolder"
+            exit 1
+          }
+          if (-not $testFiles) {
+            Write-Error "No *Tests.ps1 files found in $testFolder"
+            exit 1
+          }
+
+          $scriptPaths = ($scriptFiles | ForEach-Object { $_.FullName }) -join ';'
+          $testPaths = ($testFiles | ForEach-Object { $_.FullName }) -join ';'
+
+          Write-Host "##vso[task.setvariable variable=SCRIPT_PATHS;isOutput=true]$scriptPaths"
+          Write-Host "##vso[task.setvariable variable=TEST_PATHS;isOutput=true]$testPaths"

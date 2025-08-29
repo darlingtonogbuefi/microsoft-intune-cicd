@@ -1,0 +1,90 @@
+parameters:
+  - name: tenantId
+    type: string
+  - name: clientId
+    type: string
+  - name: clientSecret
+    type: string
+  - name: targetGroupId
+    type: string
+  - name: scriptIds
+    type: string
+
+jobs:
+- job: AssignScripts
+  pool:
+    name: Default
+
+  steps:
+    - checkout: none
+
+    - download: current
+      artifact: ScriptAssignments
+
+    - task: PowerShell@2
+      displayName: 'Assign deployed scripts to Intune group'
+      inputs:
+        targetType: 'inline'
+        pwsh: true
+        script: |
+          $tenantId = '${{ parameters.tenantId }}'
+          $clientId = '${{ parameters.clientId }}'
+          $clientSecret = '${{ parameters.clientSecret }}'
+          $groupId = '${{ parameters.targetGroupId }}'
+          $assignmentFile = "$(Pipeline.Workspace)/ScriptAssignments/script-assignments.json"
+
+          if (-not (Test-Path $assignmentFile)) {
+              Write-Error "Assignment JSON file not found: $assignmentFile"
+              exit 1
+          }
+
+          if (-not (Get-Module -ListAvailable -Name Az.Accounts)) {
+              Install-Module Az.Accounts -Force -Scope CurrentUser -AllowClobber
+          }
+          Import-Module Az.Accounts
+
+          if (-not (Get-Module -ListAvailable -Name Microsoft.Graph)) {
+          Install-Module -Name Microsoft.Graph -Force -AllowClobber -Scope AllUsers
+          }
+
+          $selectedModules = @(
+          "Microsoft.Graph.Authentication",
+          "Microsoft.Graph.DeviceManagement.Administration"
+          )
+
+          foreach ($module in $selectedModules) {
+            if (-not (Get-Module -Name $module)) {
+              Import-Module -Name $module -Global
+            }
+          }
+
+          $secureSecret = ConvertTo-SecureString $clientSecret -AsPlainText -Force
+          $cred = New-Object System.Management.Automation.PSCredential ($clientId, $secureSecret)
+
+          Connect-AzAccount -ServicePrincipal -TenantId $tenantId -Credential $cred
+          $token = (Get-AzAccessToken -TenantId $tenantId -ResourceUrl "https://graph.microsoft.com").Token
+          Connect-MgGraph -AccessToken $token
+
+          $assignments = Get-Content -Raw -Path $assignmentFile | ConvertFrom-Json
+
+          foreach ($entry in $assignments) {
+              $scriptId = $entry.scriptId
+              if (-not $scriptId) {
+                  Write-Warning "No scriptId found in entry, skipping..."
+                  continue
+              }
+
+              $uri = "https://graph.microsoft.com/beta/deviceManagement/deviceManagementScripts/$scriptId/assign"
+
+              $body = @{
+                deviceManagementScriptGroupAssignments = @(
+                  @{
+                    '@odata.type' = '#microsoft.graph.deviceManagementScriptGroupAssignment'
+                    targetGroupId = $groupId
+                  }
+                )
+              } | ConvertTo-Json -Depth 5
+
+              Write-Host "Assigning script $($entry.displayName) [$scriptId] to group $groupId"
+              Invoke-MgGraphRequest -Method POST -Uri $uri -Body $body -ContentType "application/json"
+          }

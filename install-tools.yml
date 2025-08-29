@@ -1,0 +1,103 @@
+- name: Configure Windows VM - Install PowerShell, Python, CLI tools
+  hosts: windows
+  gather_facts: yes
+  tasks:
+
+    - name: Ensure Chocolatey is installed
+      win_chocolatey:
+        name: chocolatey
+        state: present
+
+    - name: Install latest PowerShell (pwsh) from GitHub releases if not installed
+      win_shell: |
+        if (-not (Get-Command pwsh -ErrorAction SilentlyContinue)) {
+          $latestRelease = Invoke-RestMethod -Uri "https://api.github.com/repos/PowerShell/PowerShell/releases/latest"
+          $msiAsset = $latestRelease.assets | Where-Object { $_.name -like "*win-x64.msi" } | Select-Object -First 1
+          $pwshInstaller = "$env:TEMP\$($msiAsset.name)"
+          Invoke-WebRequest -Uri $msiAsset.browser_download_url -OutFile $pwshInstaller
+          Start-Process msiexec.exe -ArgumentList "/i", "`"$pwshInstaller`"", "/quiet", "/norestart" -Wait
+          Remove-Item $pwshInstaller -Force
+        }
+
+    - name: Add PowerShell 7+ to system PATH if not present
+      win_shell: |
+        $path = [Environment]::GetEnvironmentVariable('Path', 'Machine')
+        if ($path -notlike '*C:\Program Files\PowerShell\7*') {
+          $newPath = "C:\Program Files\PowerShell\7;" + $path
+          [Environment]::SetEnvironmentVariable('Path', $newPath, 'Machine')
+        }
+
+    - name: Verify PowerShell 7+ is installed at expected path
+      win_shell: |
+        if (-not (Test-Path "C:\Program Files\PowerShell\7\pwsh.exe")) {
+          Write-Error "PowerShell 7+ was not installed at the expected path."
+        }
+
+    - name: Ensure NuGet provider is installed silently
+      win_shell: |
+        if (-not (Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue)) {
+          Install-PackageProvider -Name NuGet -Force -Scope AllUsers
+        }
+
+    - name: Remove older versions of Pester if found
+      win_shell: |
+        $old = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version -lt [Version]'5.0.0' }
+        if ($old) {
+          $old | ForEach-Object { Uninstall-Module -Name $_.Name -RequiredVersion $_.Version -Force }
+        }
+
+    - name: Install latest Pester non-interactively
+      win_shell: |
+        if (-not (Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version -ge [Version]'5.0.0' })) {
+          Install-Module -Name Pester -Force -SkipPublisherCheck -AllowClobber -Confirm:$false -Scope AllUsers
+        }
+
+    - name: Create PowerShell 7 desktop shortcut
+      win_shortcut:
+        src: "C:\\Program Files\\PowerShell\\7\\pwsh.exe"
+        dest: "C:\\Users\\Public\\Desktop\\PowerShell 7.lnk"
+        description: "PowerShell 7 Desktop Shortcut"
+        icon: "C:\\Program Files\\PowerShell\\7\\pwsh.exe"
+
+    - name: Install Python if not present
+      win_shell: |
+        if (-not (Get-Command python.exe -ErrorAction SilentlyContinue)) {
+          choco install python -y
+        }
+
+    - name: Upgrade pip and install common packages
+      win_shell: |
+        if (Get-Command python.exe -ErrorAction SilentlyContinue) {
+          python -m ensurepip --upgrade
+          python -m pip install --upgrade pip virtualenv requests setuptools wheel
+        }
+
+    - name: Install Azure CLI if not present
+      win_shell: |
+        if (-not (Get-Command az -ErrorAction SilentlyContinue)) {
+          choco install azure-cli -y
+        }
+
+    - name: Install Az.Accounts module if not present
+      win_shell: |
+        if (-not (Get-Module -ListAvailable -Name Az.Accounts)) {
+          Install-Module -Name Az.Accounts -Force -AllowClobber -Scope AllUsers
+        }
+
+    - name: Install full Microsoft.Graph module and import selected submodules if not already imported
+      win_shell: |
+        if (-not (Get-Module -ListAvailable -Name Microsoft.Graph)) {
+        Install-Module -Name Microsoft.Graph -Force -AllowClobber -Scope AllUsers
+        }
+
+        $selectedModules = @(
+        "Microsoft.Graph.Authentication",
+        "Microsoft.Graph.DeviceManagement.Administration"
+        )
+
+        foreach ($module in $selectedModules) {
+          if (-not (Get-Module -Name $module)) {
+            Import-Module -Name $module -Global
+          }
+        }
+      

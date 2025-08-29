@@ -1,0 +1,97 @@
+trigger:
+  branches:
+    include:
+      - main
+
+variables:
+- group: KeyVault-Secrets
+- group: notifications
+- name: SCRIPT_FOLDER
+  value: 'intune-scripts'
+- name: TEST_FOLDER
+  value: 'pester-tests'
+- name: TEST_RESULTS
+  value: 'Test-Pester.xml'
+
+pool:
+  name: Default
+
+stages:
+- stage: DiscoverFiles
+  displayName: Discover Script & Test Files
+  jobs:
+  - template: templates/discover-files.yml
+
+- stage: PesterTests
+  dependsOn: DiscoverFiles
+  variables:
+    TEST_PATHS: $[ stageDependencies.DiscoverFiles.DiscoverFiles.outputs['SetVars.TEST_PATHS'] ]
+  jobs:
+  - template: templates/test-pester.yml
+
+- stage: PSScriptAnalyzer
+  dependsOn: DiscoverFiles
+  variables:
+    SCRIPT_PATHS: $[ stageDependencies.DiscoverFiles.DiscoverFiles.outputs['SetVars.SCRIPT_PATHS'] ]
+  jobs:
+  - template: templates/lint-psscriptanalyzer.yml
+
+- stage: DeployToIntune
+  dependsOn: 
+    - PesterTests
+    - PSScriptAnalyzer
+  condition: and(succeeded('PesterTests'), succeeded('PSScriptAnalyzer'))
+  jobs:
+  - template: templates/deploy-intune.yml
+
+- stage: AssignPolicies
+  dependsOn: DeployToIntune
+  condition: succeeded('DeployToIntune')
+  jobs:
+  - job: ParseAssignments
+    displayName: Parse Script Assignments
+    steps:
+      - download: current
+        artifact: ScriptAssignments
+
+      - task: PowerShell@2
+        name: SetAssignments
+        inputs:
+          targetType: 'inline'
+          pwsh: true
+          script: |
+            $jsonPath = "$(Pipeline.Workspace)/ScriptAssignments/script-assignments.json"
+            $json = Get-Content -Raw -Path $jsonPath | ConvertFrom-Json
+            # Extract array of script IDs
+            $scriptIds = $json | ForEach-Object { $_.scriptId }
+            $scriptIdsString = $scriptIds -join ','
+            Write-Host "##vso[task.setvariable variable=scriptIds;isOutput=true]$scriptIdsString"
+
+  - template: templates/assign-policy.yml
+    parameters:
+      tenantId: $(MyTenantId)
+      clientId: $(MyAppClientId)
+      clientSecret: $(MyClientSecret)
+      targetGroupId: $(IntuneGroupId)       # from variable group 'targetgroupid'
+      scriptIds: $[ stageDependencies.AssignPolicies.ParseAssignments.outputs['SetAssignments.scriptIds'] ]
+
+
+
+- stage: NotifyMsTeamsAndSlack
+  displayName: Notify Slack & Teams
+  dependsOn:
+    - AssignPolicies
+  condition: succeeded('AssignPolicies')
+  jobs:
+  - template: templates/notify-slack.yml
+    parameters:
+      webhookUrl: $(SLACK_WEBHOOK_URL)
+      pipelineName: $(Build.DefinitionName)
+      status: $(Agent.JobStatus)
+
+  - template: templates/notify-teams.yml
+    parameters:
+      webhookUrl: $(MSTEAM_WEBHOOK_URL)
+      pipelineName: $(Build.DefinitionName)
+      status: $(Agent.JobStatus)
+

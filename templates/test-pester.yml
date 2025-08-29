@@ -1,0 +1,66 @@
+parameters: {}
+
+jobs:
+- job: RunPesterTests
+  displayName: 'Run Pester Tests'
+  pool:
+    name: Default
+  steps:
+    - checkout: self
+
+    - task: PowerShell@2
+      displayName: 'Install Latest Pester Module'
+      inputs:
+        targetType: 'inline'
+        pwsh: true
+        arguments: '-NoProfile -NonInteractive'
+        script: |
+          if (-not (Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue)) {
+            Install-PackageProvider -Name NuGet -Force -Scope CurrentUser
+          }
+          $repo = Get-PSRepository -Name 'PSGallery'
+          if ($repo.InstallationPolicy -ne 'Trusted') {
+            Set-PSRepository -Name 'PSGallery' -InstallationPolicy Trusted
+          }
+          Get-InstalledModule -Name Pester -AllVersions -ErrorAction SilentlyContinue | ForEach-Object {
+            Uninstall-Module -Name $_.Name -RequiredVersion $_.Version -Force -ErrorAction SilentlyContinue
+          }
+          Install-Module -Name Pester -Force -Scope CurrentUser -AllowClobber -SkipPublisherCheck
+
+    - task: PowerShell@2
+      displayName: 'Run Pester Tests on All Test Files'
+      inputs:
+        targetType: 'inline'
+        pwsh: true
+        arguments: '-NoProfile -NonInteractive'
+        script: |
+          Import-Module Pester
+
+          $testPaths = "$(TEST_PATHS)" -split ';'
+          $failedTests = $false
+          $pesterResultsPath = "$(System.DefaultWorkingDirectory)/$(TEST_RESULTS)"
+
+          $allResults = @()
+          foreach ($testFile in $testPaths) {
+            Write-Host "Running tests in $testFile"
+            if (-Not (Test-Path -Path $testFile)) {
+              Write-Warning "Test file not found: $testFile"
+              continue
+            }
+
+            $testResult = Invoke-Pester -Path $testFile -PassThru -Verbose
+            $allResults += $testResult
+
+            if ($testResult.FailedCount -gt 0) {
+              $failedTests = $true
+            }
+          }
+
+          $allResults | Export-Clixml -Path $pesterResultsPath
+          Write-Host "##vso[task.setvariable variable=TESTS_FAILED]$failedTests"
+
+    - task: PublishPipelineArtifact@1
+      displayName: 'Publish Pester Test Results'
+      inputs:
+        targetPath: '$(System.DefaultWorkingDirectory)/$(TEST_RESULTS)'
+        artifactName: 'PesterTestResults'

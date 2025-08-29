@@ -1,0 +1,34 @@
+parameters:
+  webhookUrl: ''
+  pipelineName: ''
+  status: ''
+
+jobs:
+- job: NotifySlack
+  displayName: Notify Slack
+  steps:
+  - task: PowerShell@2
+    displayName: Send Slack Notification
+    inputs:
+      targetType: 'inline'
+      pwsh: true
+      script: |
+        $uri = '${{ parameters.webhookUrl }}'
+        $pipeline = '${{ parameters.pipelineName }}'
+        $status = '${{ parameters.status }}'
+        $statusEmoji = switch ($status.ToLower()) {
+          'succeeded' { ':white_check_mark:' }
+          'failed'    { ':x:' }
+          'canceled'  { ':warning:' }
+          default     { ':grey_question:' }
+        }
+
+        $message = "$statusEmoji *$pipeline* pipeline has completed with status: *$status*"
+        $payload = @{ text = $message } | ConvertTo-Json -Compress
+
+        try {
+          Invoke-RestMethod -Uri $uri -Method POST -Body $payload -ContentType 'application/json'
+          Write-Host "Slack notification sent."
+        } catch {
+          Write-Error "Slack notification failed: $_"
+        }

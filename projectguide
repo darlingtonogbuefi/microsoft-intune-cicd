@@ -1,0 +1,246 @@
+
+                                                        ***IMPLEMENTATION GUIDE***
+
+Note: This project can be completed entirely using free trial accounts or licenses, with no cost involved.
+
+🔧 1. Install Required Tools
+Install the following tools and ensure they are in your system PATH:
+
+Git
+GitHub CLI (gh)
+Terraform
+Azure CLI
+PowerShell (latest)
+Visual Studio Code
+
+
+🌐 2. Create Free Accounts
+Create accounts on:
+
+GitHub
+Azure
+Microsoft 365 Admin Center
+→ Activate Microsoft Intune and Microsoft Teams trial licenses
+→ Install Microsoft Teams
+Azure DevOps Organization
+Slack
+
+
+
+🔐 3. Collect and Store Secrets in GitHub
+a. AZURE_CREDENTIALS (Service Principal JSON)
+
+
+az ad sp create-for-rbac --name "MSINTUNE-TERRAFORM-SP" --role="Contributor" --scopes="/subscriptions/dd8fd3a7-0dbc-4fdf-a53f-d0eb63c36ad4" --sdk-auth
+
+{
+  "clientId": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "clientSecret": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "subscriptionId": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "tenantId": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "activeDirectoryEndpointUrl": "https://login.microsoftonline.com",
+  "resourceManagerEndpointUrl": "https://management.azure.com/",
+  "activeDirectoryGraphResourceId": "https://graph.windows.net/",
+  "sqlManagementEndpointUrl": "https://management.core.windows.net:8443/",
+  "galleryEndpointUrl": "https://gallery.azure.com/",
+  "managementEndpointUrl": "https://management.core.windows.net/"
+}  
+➡ Save the output JSON as AZURE_CREDENTIALS in GitHub repo secrets.
+
+
+b. VM_ADMIN_USERNAME & VM_ADMIN_PASSWORD
+Choose and save credentials for your Azure VM.
+
+c. AZDO_ORG_URL
+https://dev.azure.com/<your-org-name>
+
+d. AZDO_PAT (Personal Access Token)
+Azure DevOps → User Settings → Personal Access Tokens
+Create new PAT with scopes: Code, Project and Team, Service Connections, Variable Groups
+Save as AZDO_PAT in GitHub secrets.
+
+e. AZURE_DEVOPS_SP_OBJECT_ID
+Register an app in Azure AD
+Get the Object ID from Azure → App registrations → Overview
+Save it as AZURE_DEVOPS_SP_OBJECT_ID in GitHub
+
+
+🔐 4. Set Up GitHub Repository Secrets
+Secret Name	Description
+AZURE_CREDENTIALS	Azure SP JSON
+VM_ADMIN_USERNAME	Admin username for VM
+VM_ADMIN_PASSWORD	Admin password for VM
+
+
+🧑‍💻 5. VSCode Setup and GitHub Integration
+2.1 Git Config & Repo Clone
+
+git config --global user.name "Your Name"
+git config --global user.email "you@example.com"
+git clone https://github.com/<your-username>/<your-repo>.git
+cd <your-repo>
+Authenticate GitHub CLI
+
+gh auth login
+2.2 Update Script URL
+Edit the main.tf file:
+
+"fileUris": [
+  "https://raw.githubusercontent.com/<your-username>/<your-repo>/main/psscript.ps1"
+]
+
+Commit and push:
+git add .
+git commit -m "Updated fileUris to point to my own repo"
+git push origin main
+
+🧑‍💻 6. Trigger the Deployment Workflow
+Run the deployment GitHub Actions workflow:
+
+
+gh workflow run deploy.yml --ref main
+
+
+🖥 Step 7: Connect to Azure VM and Install Agent
+
+After deployment:
+a. Go to Azure Portal → Resource Groups → Your VM → Connect (RDP)
+Inside the VM:
+a. Download the agent ZIP file:
+https://download.agent.dev.azure.com/agent/4.258.1/vsts-agent-win-x64-4.258.1.zip
+
+b. Create and navigate to the agent folder:
+
+mkdir agent  
+cd agent
+c. Extract the downloaded ZIP into the agent folder:
+
+Add-Type -AssemblyName System.IO.Compression.FileSystem  
+[System.IO.Compression.ZipFile]::ExtractToDirectory("$HOME\Downloads\vsts-agent-win-x64-4.258.1.zip", "$PWD")
+
+Alternatively, you can manual extract and copy the extracted file into your agent folder
+
+d. Configure the agent:
+Run the following command and follow the prompts:
+
+.\config.cmd
+e. Start the agent (if not already started):
+
+.\run.cmd
+
+
+🔗 Step 8: Configure Azure DevOps Service Connection
+DevOps → Project Settings → Service Connections
+
+Add new Azure Resource Manager connection:
+Use Service Principal (manual or automatic)
+Scope: Subscription / Management Group
+Check Grant access permission to all pipelines
+
+
+🔐 Step 9: Azure Key Vault Configuration
+a. Key Vault Setup
+Go to your Key Vault in Azure
+
+Add Access Policies:
+Yourself (full permissions)
+
+DevOps App Registration (get, list)
+b. App Registration (Manual)
+Azure Portal → Azure AD → App Registrations → New
+
+Fill details:
+Name: AzureDevOps-SP
+Leave redirect URI blank
+
+Save:
+Application (client) ID
+Directory (tenant) ID
+Certificates & Secrets → Create a new secret
+Save as MyClientSecret
+
+Add API Permissions:
+Microsoft Graph → 
+DeviceManagementRBAC.ReadWrite.All, 
+DeviceManagementServiceConfig.ReadWrite.All, 
+DeviceManagementConfiguration.ReadWrite.All, DeviceManagementApps.ReadWrite.All, DeviceManagementManagedDevices.ReadWrite.All, Group.ReadWrite.All
+
+Azure Key Vault → Secrets.Read.All (Get, List)
+c. Create Secrets in Key Vault
+Secret              Name	                Description
+MyClientSecret	  App client                secret
+MyTenantId	      Tenant ID
+MyAppClientId	  Application                (client) ID
+IntuneGroupId	  Intune security group      Object ID
+
+
+
+📦 Step 10: Create Notifications Variable Group
+
+a. Get Webhook URLs
+Slack:
+Go to: https://api.slack.com/apps → Create App
+Enable Incoming Webhooks
+Add webhook to workspace and copy URL
+➡ Save as SLACK_WEBHOOK_URL
+
+Microsoft Teams:
+Open Teams → Channel settings (⋯) → Connectors
+Add Incoming Webhook, name it, copy URL
+➡ Save as MSTEAM_WEBHOOK_URL
+b. Create Azure DevOps Variable Group
+DevOps → Pipelines → Library → + Variable Group
+
+Name it: notifications
+Add variables:
+Name	Secret	Value
+SLACK_WEBHOOK_URL	✅	Slack Webhook URL
+MSTEAM_WEBHOOK_URL	✅	Microsoft Teams Webhook
+Save the group
+
+
+
+🔐 Step 11: Connect Azure Key Vault to DevOps
+DevOps → Pipelines → Library → + Variable Group
+
+Name: KeyVault-Secrets
+Link to Azure Key Vault
+
+Select secrets:
+MyClientSecret
+MyTenantId
+MyAppClientId
+IntuneGroupId
+
+Save
+Ensure your service connection has Get and List permissions on the Key Vault.
+
+
+🚀 Step 12: Run the CI/CD Pipeline
+a. Create and Connect Pipeline
+Azure DevOps → Pipelines → New Pipeline
+Choose GitHub → Authorize
+Select repo → Choose YAML config
+Select intune-cicd-pipeline.yml or create one
+
+b. Trigger the Pipeline
+On GitHub commits (auto)
+
+Or manually: Pipelines → Run Pipeline
+
+
+🧑‍💻 13. Trigger the cleanup Workflow
+Run the deployment GitHub Actions workflow:
+
+gh workflow run detroy.yml --ref main
+
+
+
+
+
+
+
+
+
+
+

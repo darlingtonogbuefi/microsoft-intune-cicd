@@ -1,0 +1,72 @@
+name: Destroy Azure DevOps Agent Resources
+
+on:
+  workflow_dispatch:
+
+jobs:
+  destroy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.7
+
+      - name: Get Storage Account Key for Backend
+        id: get_key
+        run: |
+          echo "Fetching storage account key for backend..."
+          key=$(az storage account keys list \
+            --resource-group tfstate-rg \
+            --account-name tfstatestorage946 \
+            --query "[0].value" -o tsv)
+          echo "key=$key" >> $GITHUB_OUTPUT
+
+      - name: Terraform Init
+        env:
+          ARM_ACCESS_KEY: ${{ steps.get_key.outputs.key }}
+        run: |
+          echo "Initializing Terraform..."
+          terraform init -input=false
+
+      - name: Terraform Destroy
+        env:
+          TF_LOG: DEBUG
+          TF_LOG_PATH: ./terraform_destroy.log
+
+          ARM_ACCESS_KEY:      ${{ steps.get_key.outputs.key }}
+          ARM_SUBSCRIPTION_ID: ${{ fromJson(secrets.AZURE_CREDENTIALS).subscriptionId }}
+          ARM_CLIENT_ID:       ${{ fromJson(secrets.AZURE_CREDENTIALS).clientId }}
+          ARM_CLIENT_SECRET:   ${{ fromJson(secrets.AZURE_CREDENTIALS).clientSecret }}
+          ARM_TENANT_ID:       ${{ fromJson(secrets.AZURE_CREDENTIALS).tenantId }}
+
+          TF_VAR_subscription_id:  ${{ fromJson(secrets.AZURE_CREDENTIALS).subscriptionId }}
+          TF_VAR_client_id:        ${{ fromJson(secrets.AZURE_CREDENTIALS).clientId }}
+          TF_VAR_client_secret:    ${{ fromJson(secrets.AZURE_CREDENTIALS).clientSecret }}
+          TF_VAR_tenant_id:        ${{ fromJson(secrets.AZURE_CREDENTIALS).tenantId }}
+          TF_VAR_admin_username:   ${{ secrets.VM_ADMIN_USERNAME }}
+          TF_VAR_admin_password:   ${{ secrets.VM_ADMIN_PASSWORD }}
+        run: |
+          echo "Running Terraform destroy..."
+          terraform -chdir=terraform init -input=false -backend=true
+          terraform -chdir=terraform destroy -auto-approve -input=false -var-file=terraform.tfvars 2>&1 | tee terraform-output.log
+          echo "Terraform destroy completed"
+
+      - name: Delete TF State Resource Group
+        run: |
+          echo "Deleting Terraform state resource group (tfstate-rg)..."
+          az group delete --name tfstate-rg --yes --no-wait || echo "tfstate-rg not found"
+
+      - name: Delete NetworkWatcherRG
+        run: |
+          echo "Deleting NetworkWatcherRG"
+          az group delete --name NetworkWatcherRG --yes --no-wait || echo "NetworkWatcherRG not found or auto-managed"

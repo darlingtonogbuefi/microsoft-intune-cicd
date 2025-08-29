@@ -1,0 +1,106 @@
+parameters: {}
+
+jobs:
+- job: DeployIntune
+  pool:
+    name: Default
+  steps:
+    - checkout: self
+
+    - task: PowerShell@2
+      displayName: 'Deploy Scripts to Intune (if all tests passed)'
+      inputs:
+        targetType: 'inline'
+        pwsh: true
+        script: |
+          $scriptFolder = "$(System.DefaultWorkingDirectory)/$(SCRIPT_FOLDER)"
+          $scriptFiles = Get-ChildItem -Path $scriptFolder -Filter '*.ps1' -File | Where-Object { $_.Name -notlike '*Tests.ps1' }
+
+          if (-not $scriptFiles) {
+            Write-Error "No scripts found to deploy."
+            exit 1
+          }
+
+          $tenantId = "$(MyTenantId)"
+          $clientId = "$(MyAppClientId)"
+          $clientSecret = "$(MyClientSecret)"
+
+          if (-not (Get-Module -ListAvailable -Name Az.Accounts)) {
+              Install-Module Az.Accounts -Force -Scope CurrentUser -AllowClobber
+          }
+
+          if (-not (Get-Module -Name Az.Accounts)) {
+              Import-Module Az.Accounts
+          }
+
+          if (-not (Get-Module -ListAvailable -Name Microsoft.Graph)) {
+              Install-Module Microsoft.Graph -Force -Scope CurrentUser -AllowClobber
+          }
+
+       
+          if (-not (Get-Module -ListAvailable -Name Microsoft.Graph)) {
+          Install-Module -Name Microsoft.Graph -Force -AllowClobber -Scope AllUsers
+          }
+
+          $selectedModules = @(
+          "Microsoft.Graph.Authentication",
+          "Microsoft.Graph.DeviceManagement.Administration"
+          )
+
+          foreach ($module in $selectedModules) {
+            if (-not (Get-Module -Name $module)) {
+              Import-Module -Name $module -Global
+            }
+          }
+
+
+          $secureSecret = ConvertTo-SecureString $clientSecret -AsPlainText -Force
+          $cred = New-Object System.Management.Automation.PSCredential ($clientId, $secureSecret)
+
+          Connect-AzAccount -ServicePrincipal -TenantId $tenantId -Credential $cred
+          $token = (Get-AzAccessToken -TenantId $tenantId -ResourceUrl "https://graph.microsoft.com").Token
+          Connect-MgGraph -AccessToken $token
+
+          $outputDir = "$(Pipeline.Workspace)/ScriptAssignments"
+          New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
+
+          $assignments = @()
+
+          foreach ($script in $scriptFiles) {
+            $scriptContent = Get-Content -Raw -Path $script.FullName
+            $encodedScript = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($scriptContent))
+
+            $deviceManagementScript = @{
+              displayName           = [System.IO.Path]::GetFileNameWithoutExtension($script.FullName)
+              description           = "Deployed via Azure DevOps pipeline"
+              scriptContent         = $encodedScript
+              runFrequency          = "once"
+              enforceSignatureCheck = $false
+              runAs32Bit            = $true
+            }
+
+            $response = Invoke-MgGraphRequest -Method POST `
+              -Uri "https://graph.microsoft.com/beta/deviceManagement/deviceManagementScripts" `
+              -Body ($deviceManagementScript | ConvertTo-Json -Depth 5) `
+              -ContentType "application/json"
+
+            $scriptId = $response.id
+            if (-not $scriptId) {
+              Write-Error "Failed to get script ID for $($script.Name)"
+              exit 1
+            }
+
+            $assignments += [pscustomobject]@{
+              scriptId = $scriptId
+              displayName = $deviceManagementScript.displayName
+            }
+
+            Write-Host "Deployed $($script.Name) as $scriptId"
+          }
+
+          $assignments | ConvertTo-Json -Depth 5 | Out-File -FilePath "$outputDir/script-assignments.json" -Encoding utf8
+          Write-Host "Wrote script assignments JSON to $outputDir/script-assignments.json"
+
+    - publish: $(Pipeline.Workspace)/ScriptAssignments
+      artifact: ScriptAssignments
+      displayName: 'Publish Script Assignments artifact'
