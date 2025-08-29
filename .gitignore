@@ -19,7 +19,7 @@ override.tf.json
 .terraformrc
 terraform.rc
 
-# IDE files and directories
+# IDE files
 .idea/
 .vscode/
 
